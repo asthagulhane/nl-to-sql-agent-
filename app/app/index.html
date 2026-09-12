@@ -73,7 +73,7 @@
             // Show the generated SQL
             const sqlBox = document.getElementById("sql-box");
             sqlBox.style.display = "block";
-            sqlBox.textContent = "Generated SQL: " + data.final_sql;
+            sqlBox.textContent = "Generated SQL: " + data.final_sql + " (Confidence: " + data.confidence + "/10 — " + data.reasoning + ")";
 
             // Show the retry history (collapsible, so it doesn't clutter the UI)
             const attemptsBox = document.getElementById("attempts-box");

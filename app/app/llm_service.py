@@ -1,8 +1,9 @@
 import os
 import sqlite3
-import json          # ADD THIS LINE
+import json
 from google import genai
 from dotenv import load_dotenv
+
 load_dotenv()
 
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
@@ -25,11 +26,7 @@ def get_schema(db_path="sample.db"):
     return schema_description
 
 
-def generate_sql(question: str, schema: str, error_context: str = "") -> str:
-    """
-    Generates SQL. If error_context is provided, it means a previous attempt
-    failed — we include that failure in the prompt so Gemini can fix it.
-    """
+def generate_sql(question: str, schema: str, error_context: str = "") -> dict:
     correction_note = ""
     if error_context:
         correction_note = f"""
@@ -41,29 +38,36 @@ Please fix the SQL query to avoid this error.
 
     prompt = f"""
 You are an expert SQL generator. Given a database schema and a question,
-return ONLY the raw SQL query — no explanation, no markdown, no code fences.
+generate a SQL query.
 
 Schema:
 {schema}
 {correction_note}
 Question: {question}
 
-SQL query:
+Respond with ONLY a JSON object in this exact format, nothing else:
+{{
+  "sql": "the SQL query here",
+  "confidence": a number from 1 to 10 indicating how confident you are this SQL correctly answers the question,
+  "reasoning": "one short sentence explaining your confidence level"
+}}
 """
     response = client.models.generate_content(
         model="gemini-3.6-flash",
         contents=prompt
     )
-    sql = response.text.strip()
-    sql = sql.replace("```sql", "").replace("```", "").strip()
-    return sql
+    raw_text = response.text.strip()
+    raw_text = raw_text.replace("```json", "").replace("```", "").strip()
+
+    try:
+        parsed = json.loads(raw_text)
+    except json.JSONDecodeError:
+        parsed = {"sql": raw_text, "confidence": 0, "reasoning": "Could not parse structured response."}
+
+    return parsed
 
 
 def execute_query(sql: str, db_path="sample.db"):
-    """
-    Runs the generated SQL against the database.
-    Returns a dict with either the results or the error — never crashes the program.
-    """
     if not sql.strip().upper().startswith("SELECT"):
         return {"success": False, "error": "Only SELECT statements are allowed."}
 
@@ -84,21 +88,23 @@ def execute_query(sql: str, db_path="sample.db"):
 
 
 def generate_and_run(question: str, max_retries: int = 3):
-    """
-    The self-correction loop. Tries to generate + execute SQL up to
-    max_retries times, feeding each failure back into the next attempt.
-    Returns the full attempt history so it's visible what the agent did.
-    """
     schema = get_schema()
     attempts = []
     error_context = ""
+
     for attempt_number in range(1, max_retries + 1):
-        sql = generate_sql(question, schema, error_context)
+        sql_response = generate_sql(question, schema, error_context)
+        sql = sql_response["sql"]
+        confidence = sql_response.get("confidence", 0)
+        reasoning = sql_response.get("reasoning", "")
+
         result = execute_query(sql)
 
         attempts.append({
             "attempt": attempt_number,
             "sql": sql,
+            "confidence": confidence,
+            "reasoning": reasoning,
             "success": result["success"],
             "error": result.get("error")
         })
@@ -106,6 +112,8 @@ def generate_and_run(question: str, max_retries: int = 3):
         if result["success"]:
             return {
                 "final_sql": sql,
+                "confidence": confidence,
+                "reasoning": reasoning,
                 "results": result["results"],
                 "attempts": attempts
             }
@@ -118,7 +126,9 @@ def generate_and_run(question: str, max_retries: int = 3):
         "error": f"Failed after {max_retries} attempts.",
         "attempts": attempts
     }
+
+
 if __name__ == "__main__":
-    test_question = "Show me all employees sorted by their hire_date"
+    test_question = "Show me all employees in the Engineering department"
     result = generate_and_run(test_question)
     print("Final result:", result)
