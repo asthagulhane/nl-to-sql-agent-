@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>NL-to-SQL Agent</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 700px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+        input[type="text"] {
+            width: 70%;
+            padding: 8px;
+            font-size: 16px;
+        }
+        button {
+            padding: 8px 16px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 8px;
+            text-align: left;
+        }
+        #sql-box {
+            background: #f4f4f4;
+            padding: 10px;
+            margin-top: 15px;
+            font-family: monospace;
+        }
+        details {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>NL-to-SQL Agent</h1>
+    <p>Ask a question about the employee database in plain English.</p>
+
+    <!-- Just an input + button, no <form> needed since we're using fetch() -->
+    <input type="text" id="question-input" placeholder="e.g. Show me all employees in Engineering">
+    <button onclick="askQuestion()">Ask</button>
+
+    <div id="sql-box" style="display: none;"></div>
+    <details id="attempts-box" style="display: none;">
+        <summary>Agent attempt history</summary>
+        <pre id="attempts-content"></pre>
+    </details>
+    <table id="results-table"></table>
+
+    <script>
+        async function askQuestion() {
+            const question = document.getElementById("question-input").value;
+            if (!question) return;
+
+            // Call our own FastAPI backend's /query endpoint
+            const response = await fetch("/query", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ question: question })
+            });
+
+            const data = await response.json();
+
+            // Show the generated SQL
+            const sqlBox = document.getElementById("sql-box");
+            sqlBox.style.display = "block";
+            sqlBox.textContent = "Generated SQL: " + data.final_sql;
+
+            // Show the retry history (collapsible, so it doesn't clutter the UI)
+            const attemptsBox = document.getElementById("attempts-box");
+            const attemptsContent = document.getElementById("attempts-content");
+            attemptsBox.style.display = "block";
+            attemptsContent.textContent = JSON.stringify(data.attempts, null, 2);
+
+            // Build the results table dynamically from whatever columns came back
+            const table = document.getElementById("results-table");
+            table.innerHTML = "";
+
+            if (data.results && data.results.length > 0) {
+                const headers = Object.keys(data.results[0]);
+                const headerRow = document.createElement("tr");
+                headers.forEach(h => {
+                    const th = document.createElement("th");
+                    th.textContent = h;
+                    headerRow.appendChild(th);
+                });
+                table.appendChild(headerRow);
+
+                data.results.forEach(row => {
+                    const tr = document.createElement("tr");
+                    headers.forEach(h => {
+                        const td = document.createElement("td");
+                        td.textContent = row[h];
+                        tr.appendChild(td);
+                    });
+                    table.appendChild(tr);
+                });
+            } else {
+                table.innerHTML = "<tr><td>No results (or query failed)</td></tr>";
+            }
+        }
+    </script>
+</body>
+</html>
