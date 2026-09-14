@@ -1,12 +1,16 @@
+import os
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from app.llm_service import generate_and_run
 
 app = FastAPI()
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 @app.get("/ui")
 def serve_frontend():
-    return FileResponse("app/index.html")
+    return FileResponse(os.path.join(BASE_DIR, "app", "index.html"))
 
 
 # This defines the exact shape of data the /query endpoint expects.
