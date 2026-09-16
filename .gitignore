@@ -1,5 +1,6 @@
 venv/
-.env
 __pycache__/
 *.pyc
-.vscode/
+.env
+app/rag/schema_index.faiss
+app/rag/table_data.pkl

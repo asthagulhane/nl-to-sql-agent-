@@ -1,12 +1,14 @@
 import os
 import sqlite3
 import json
-from google import genai
+from groq import Groq
 from dotenv import load_dotenv
+from rag.retriever import get_relevant_schema
 
 load_dotenv()
+from rag.retriever import get_relevant_schema
+client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
-client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 
 def get_schema(db_path="sample.db"):
@@ -24,6 +26,7 @@ def get_schema(db_path="sample.db"):
 
     conn.close()
     return schema_description
+
 
 
 def generate_sql(question: str, schema: str, error_context: str = "") -> dict:
@@ -52,13 +55,12 @@ Respond with ONLY a JSON object in this exact format, nothing else:
   "reasoning": "one short sentence explaining your confidence level"
 }}
 """
-    response = client.models.generate_content(
-        model="gemini-3.6-flash",
-        contents=prompt
+    response = client.chat.completions.create(
+        model="openai/gpt-oss-120b",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.2,
     )
-    raw_text = response.text.strip()
-    raw_text = raw_text.replace("```json", "").replace("```", "").strip()
-
+    raw_text = response.choices[0].message.content.strip()
     try:
         parsed = json.loads(raw_text)
     except json.JSONDecodeError:
@@ -88,7 +90,7 @@ def execute_query(sql: str, db_path="sample.db"):
 
 
 def generate_and_run(question: str, max_retries: int = 3):
-    schema = get_schema()
+    schema = get_relevant_schema(question)
     attempts = []
     error_context = ""
 
