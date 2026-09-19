@@ -22,3 +22,6 @@ A basic version would call an LLM once and hope the SQL is correct. This agent g
 - **Frontend:** HTML/CSS/vanilla JavaScript
 
 ## Architecture
+
+
+🔗 Live demo: https://nl-to-sql-agent-astha-2026-hfabf0gvcue6cmgx.centralindia-01.azurewebsites.net/ui
