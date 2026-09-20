@@ -1,10 +1,13 @@
+import os
 import pickle
 from sentence_transformers import SentenceTransformer
 import faiss
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 model = SentenceTransformer("all-MiniLM-L6-v2")
-index = faiss.read_index("rag/schema_index.faiss")
-with open("rag/table_data.pkl", "rb") as f:
+index = faiss.read_index(os.path.join(BASE_DIR, "schema_index.faiss"))
+with open(os.path.join(BASE_DIR, "table_data.pkl"), "rb") as f:
     table_data = pickle.load(f)
 
 def get_relevant_schema(question: str, k: int = 3) -> str:
