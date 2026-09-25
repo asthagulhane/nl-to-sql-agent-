@@ -1,0 +1,7 @@
+[
+  {"question": "Show me all employees in Engineering", "expects_table": "employees", "expects_where": "department"},
+  {"question": "How many employees earn more than 60000", "expects_table": "employees", "expects_aggregate": true},
+  {"question": "List all employees sorted by salary", "expects_table": "employees", "expects_order_by": true},
+  {"question": "What is the average salary in Sales", "expects_table": "employees", "expects_aggregate": true},
+  {"question": "asdkjaslkdj random gibberish", "expects_failure": true}
+]
