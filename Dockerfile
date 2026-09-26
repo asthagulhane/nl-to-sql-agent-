@@ -1,9 +1,11 @@
+# syntax=docker/dockerfile:1.4
 FROM python:3.11-slim
 
 WORKDIR /app
 
 COPY app/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --default-timeout=120 --retries=5 -r requirements.txt
 
 COPY app/ .
 
