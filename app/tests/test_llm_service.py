@@ -265,3 +265,43 @@ class TestGenerateAndRun:
 
         assert len(result["attempts"]) >= 1
         assert result["attempts"][0]["attempt"] == 1
+# =========================================================
+# QUERY TIMEOUT GOVERNANCE
+# =========================================================
+
+# =========================================================
+# QUERY TIMEOUT GOVERNANCE
+# =========================================================
+
+class TestQueryTimeout:
+
+    def test_expensive_query_is_interrupted(self):
+        """
+        Verify that SQLite interrupts an expensive
+        read-only SELECT query when its execution
+        time budget is exceeded.
+        """
+
+        expensive_query = """
+        SELECT COUNT(*)
+        FROM employees AS e1
+        CROSS JOIN employees AS e2
+        CROSS JOIN employees AS e3
+        CROSS JOIN employees AS e4
+        CROSS JOIN employees AS e5
+        CROSS JOIN employees AS e6
+        CROSS JOIN employees AS e7
+        CROSS JOIN employees AS e8
+        CROSS JOIN employees AS e9
+        CROSS JOIN employees AS e10
+        """
+
+        result = execute_query(
+            expensive_query,
+            role="admin",
+            timeout_seconds=0.001,
+        )
+
+        assert result["success"] is False
+        assert result.get("error_type") == "query_timeout"
+        assert "exceeded" in result["error"].lower()

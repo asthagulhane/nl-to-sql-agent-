@@ -1,6 +1,7 @@
 import os
 import sqlite3
 import json
+import time
 
 from groq import Groq
 from dotenv import load_dotenv
@@ -173,23 +174,26 @@ def execute_query(
     sql: str,
     db_path="sample.db",
     role: str = "viewer",
+    timeout_seconds: float = 5.0,
 ):
     """
-    Execute a read-only SQL query.
+    Execute a read-only SQL query with governance controls.
 
     Security layers:
     1. Only SELECT statements are accepted.
     2. SQLite authorizer enforces role-based column access.
+    3. Long-running queries are interrupted after the
+       configured timeout.
     """
 
     if not sql.strip().upper().startswith("SELECT"):
         return {
             "success": False,
-            "error":
-                "Only SELECT statements are allowed.",
+            "error": "Only SELECT statements are allowed.",
         }
 
     conn = None
+    timed_out = False
 
     try:
         conn = sqlite3.connect(db_path)
@@ -197,17 +201,40 @@ def execute_query(
         # -------------------------------------------------
         # Database-level RBAC
         # -------------------------------------------------
-        # The SQLite authorizer blocks restricted columns
-        # before SQLite returns their data.
-        # -------------------------------------------------
 
         apply_authorizer(
             conn,
             role,
         )
 
-        cursor = conn.cursor()
+        # -------------------------------------------------
+        # Query execution timeout
+        # -------------------------------------------------
 
+        start_time = time.monotonic()
+
+        def progress_handler():
+            nonlocal timed_out
+
+            elapsed = (
+                time.monotonic()
+                - start_time
+            )
+
+            if elapsed >= timeout_seconds:
+                timed_out = True
+                return 1
+
+            return 0
+
+        # SQLite periodically calls progress_handler().
+        # Returning 1 interrupts query execution.
+        conn.set_progress_handler(
+            progress_handler,
+            1000,
+        )
+
+        cursor = conn.cursor()
         cursor.execute(sql)
 
         columns = [
@@ -228,6 +255,17 @@ def execute_query(
         }
 
     except sqlite3.Error as error:
+
+        if timed_out:
+            return {
+                "success": False,
+                "error": (
+                    "Query execution exceeded "
+                    f"{timeout_seconds} seconds."
+                ),
+                "error_type": "query_timeout",
+            }
+
         return {
             "success": False,
             "error": str(error),
@@ -235,9 +273,12 @@ def execute_query(
 
     finally:
         if conn is not None:
+            conn.set_progress_handler(
+                None,
+                0,
+            )
+
             conn.close()
-
-
 # ---------------------------------------------------------
 # NL -> SQL -> Governance -> RBAC -> Execution
 # ---------------------------------------------------------
@@ -247,6 +288,11 @@ def generate_and_run(
     role: str = "viewer",
     max_retries: int = 3,
 ):
+    """
+    Convert a natural-language question into SQL,
+    apply governance controls, execute the query,
+    and retry failed SQL when appropriate.
+    """
 
     schema = get_relevant_schema(question)
 
@@ -295,7 +341,12 @@ def generate_and_run(
         )
 
         # -------------------------------------------------
-        # Execute using the requester's role
+        # Execute using requester's role.
+        #
+        # execute_query() now applies:
+        # - SELECT-only enforcement
+        # - SQLite RBAC
+        # - query execution timeout
         # -------------------------------------------------
 
         result = execute_query(
@@ -311,6 +362,7 @@ def generate_and_run(
                 "reasoning": reasoning,
                 "success": result["success"],
                 "error": result.get("error"),
+                "error_type": result.get("error_type"),
             }
         )
 
@@ -320,6 +372,17 @@ def generate_and_run(
                 "confidence": confidence,
                 "reasoning": reasoning,
                 "results": result["results"],
+                "attempts": attempts,
+            }
+
+        # A timeout is a governance failure, not malformed SQL.
+        # Do not ask the LLM to regenerate the query repeatedly.
+        if result.get("error_type") == "query_timeout":
+            return {
+                "final_sql": None,
+                "results": None,
+                "error": result["error"],
+                "error_type": "query_timeout",
                 "attempts": attempts,
             }
 
@@ -353,4 +416,4 @@ if __name__ == "__main__":
     print(
         "Final result:",
         result,
-    )
+    ) 
