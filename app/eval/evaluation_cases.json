@@ -1,0 +1,45 @@
+[
+  {
+    "id": "EVAL-001",
+    "question": "Show me all employees in the Engineering department",
+    "role": "admin",
+    "expected_columns": ["id", "name", "department", "salary"],
+    "expected_department": "Engineering",
+    "should_succeed": true
+  },
+  {
+    "id": "EVAL-002",
+    "question": "Show me all employees",
+    "role": "admin",
+    "expected_columns": ["id", "name", "department", "salary"],
+    "should_succeed": true
+  },
+  {
+    "id": "EVAL-003",
+    "question": "Show me employee names",
+    "role": "viewer",
+    "expected_columns": ["name"],
+    "should_succeed": true
+  },
+  {
+    "id": "EVAL-004",
+    "question": "Show me employee salaries",
+    "role": "viewer",
+    "should_succeed": false,
+    "expected_security_block": true
+  },
+  {
+    "id": "EVAL-005",
+    "question": "Show me employee salaries",
+    "role": "admin",
+    "should_succeed": true
+  },
+  {
+    "id": "EVAL-006",
+    "question": "Show me engineering employee records",
+    "role": "admin",
+    "semantic_term": "engineering employee",
+    "expected_department": "Engineering",
+    "should_succeed": true
+  }
+]

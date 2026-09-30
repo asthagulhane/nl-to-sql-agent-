@@ -1,0 +1,107 @@
+{
+  "total_cases": 6,
+  "passed": 6,
+  "failed": 0,
+  "accuracy_percent": 100.0,
+  "results": [
+    {
+      "id": "EVAL-001",
+      "question": "Show me all employees in the Engineering department",
+      "role": "admin",
+      "passed": true,
+      "checks": {
+        "success_behavior": true,
+        "expected_columns": true,
+        "department_filter": true
+      },
+      "generated_sql": "SELECT * FROM employees WHERE department = 'Engineering' LIMIT 100;",
+      "confidence": 9,
+      "latency_seconds": 1.057,
+      "row_count": 2,
+      "semantic_terms": [],
+      "error": null
+    },
+    {
+      "id": "EVAL-002",
+      "question": "Show me all employees",
+      "role": "admin",
+      "passed": true,
+      "checks": {
+        "success_behavior": true,
+        "expected_columns": true
+      },
+      "generated_sql": "SELECT * FROM employees LIMIT 100;",
+      "confidence": 10,
+      "latency_seconds": 0.592,
+      "row_count": 5,
+      "semantic_terms": [],
+      "error": null
+    },
+    {
+      "id": "EVAL-003",
+      "question": "Show me employee names",
+      "role": "viewer",
+      "passed": true,
+      "checks": {
+        "success_behavior": true,
+        "expected_columns": true
+      },
+      "generated_sql": "SELECT name FROM employees LIMIT 100;",
+      "confidence": 9,
+      "latency_seconds": 0.814,
+      "row_count": 5,
+      "semantic_terms": [],
+      "error": null
+    },
+    {
+      "id": "EVAL-004",
+      "question": "Show me employee salaries",
+      "role": "viewer",
+      "passed": true,
+      "checks": {
+        "success_behavior": true,
+        "security_block": true
+      },
+      "generated_sql": "SELECT name, salary FROM employees LIMIT 100;",
+      "confidence": null,
+      "latency_seconds": 0.781,
+      "row_count": 0,
+      "semantic_terms": [],
+      "error": "access to employees.salary is prohibited"
+    },
+    {
+      "id": "EVAL-005",
+      "question": "Show me employee salaries",
+      "role": "admin",
+      "passed": true,
+      "checks": {
+        "success_behavior": true
+      },
+      "generated_sql": "SELECT salary FROM employees LIMIT 100;",
+      "confidence": 9,
+      "latency_seconds": 0.752,
+      "row_count": 5,
+      "semantic_terms": [],
+      "error": null
+    },
+    {
+      "id": "EVAL-006",
+      "question": "Show me engineering employee records",
+      "role": "admin",
+      "passed": true,
+      "checks": {
+        "success_behavior": true,
+        "department_filter": true,
+        "semantic_definition": true
+      },
+      "generated_sql": "SELECT * FROM employees WHERE department = 'Engineering' LIMIT 100;",
+      "confidence": 10,
+      "latency_seconds": 0.73,
+      "row_count": 2,
+      "semantic_terms": [
+        "engineering employee"
+      ],
+      "error": null
+    }
+  ]
+}

@@ -20,12 +20,6 @@ from app.app.semantic_layer import build_semantic_context
 # Environment configuration
 # ---------------------------------------------------------
 
-# llm_service.py:
-# app/app/llm_service.py
-#
-# Environment file:
-# app/.env
-
 ENV_PATH = os.path.abspath(
     os.path.join(
         os.path.dirname(__file__),
@@ -105,14 +99,6 @@ def generate_sql(
     # -----------------------------------------------------
     # Semantic business layer
     # -----------------------------------------------------
-    # Retrieve approved business definitions that match
-    # the natural-language question.
-    #
-    # Example:
-    # "active employee"
-    # becomes:
-    # employees.status = 'active'
-    # -----------------------------------------------------
 
     semantic_context = build_semantic_context(question)
 
@@ -149,6 +135,8 @@ Important semantic-layer rules:
 - Do not invent a different meaning for an approved business term.
 - Do not invent business definitions when none are provided.
 - Generate only read-only SELECT SQL.
+- Answer the user's requested data directly.
+- Do not silently replace requested restricted columns with unrelated columns.
 
 {correction_note}
 
@@ -191,8 +179,9 @@ nothing else:
         parsed = {
             "sql": raw_text,
             "confidence": 0,
-            "reasoning":
-                "Could not parse structured response.",
+            "reasoning": (
+                "Could not parse structured response."
+            ),
         }
 
     return parsed
@@ -222,10 +211,18 @@ def execute_query(
     # SELECT-only protection
     # -----------------------------------------------------
 
-    if not sql.strip().upper().startswith("SELECT"):
+    normalized_sql = sql.strip().upper()
+
+    # Allow normal SELECT statements and read-only
+    # CTE queries beginning with WITH.
+    if not (
+        normalized_sql.startswith("SELECT")
+        or normalized_sql.startswith("WITH")
+    ):
         return {
             "success": False,
             "error": "Only SELECT statements are allowed.",
+            "error_type": "query_not_allowed",
         }
 
     conn = None
@@ -263,17 +260,21 @@ def execute_query(
 
             return 0
 
-        # SQLite periodically calls this callback.
-        # Returning 1 interrupts query execution.
-
         conn.set_progress_handler(
             progress_handler,
             1000,
         )
 
         cursor = conn.cursor()
-
         cursor.execute(sql)
+
+        # A valid read query should produce a description.
+        if cursor.description is None:
+            return {
+                "success": False,
+                "error": "Query did not produce a result set.",
+                "error_type": "sql_execution_error",
+            }
 
         columns = [
             description[0]
@@ -294,6 +295,12 @@ def execute_query(
 
     except sqlite3.Error as error:
 
+        error_message = str(error)
+
+        # -------------------------------------------------
+        # Timeout governance failure
+        # -------------------------------------------------
+
         if timed_out:
             return {
                 "success": False,
@@ -304,9 +311,37 @@ def execute_query(
                 "error_type": "query_timeout",
             }
 
+        # -------------------------------------------------
+        # RBAC / authorization failure
+        # -------------------------------------------------
+        #
+        # An authorization failure is a security decision.
+        # It must not be passed back to the LLM for
+        # self-correction because the model could generate
+        # another query that changes the user's request.
+        # -------------------------------------------------
+
+        lowered_error = error_message.lower()
+
+        if (
+            "prohibited" in lowered_error
+            or "not authorized" in lowered_error
+            or "authorization denied" in lowered_error
+        ):
+            return {
+                "success": False,
+                "error": error_message,
+                "error_type": "authorization_denied",
+            }
+
+        # -------------------------------------------------
+        # Ordinary SQL execution error
+        # -------------------------------------------------
+
         return {
             "success": False,
-            "error": str(error),
+            "error": error_message,
+            "error_type": "sql_execution_error",
         }
 
     finally:
@@ -349,11 +384,6 @@ def generate_and_run(
 
         # -------------------------------------------------
         # Generate SQL
-        #
-        # generate_sql() now combines:
-        # - retrieved database schema
-        # - approved semantic business definitions
-        # - retry error context
         # -------------------------------------------------
 
         sql_response = generate_sql(
@@ -371,8 +401,10 @@ def generate_and_run(
             return {
                 "final_sql": None,
                 "results": None,
-                "error":
-                    "The LLM did not return a SQL query.",
+                "error": (
+                    "The LLM did not return a SQL query."
+                ),
+                "error_type": "generation_error",
                 "attempts": attempts,
             }
 
@@ -427,24 +459,48 @@ def generate_and_run(
             }
 
         # -------------------------------------------------
-        # Timeout handling
+        # Terminal governance failures
         # -------------------------------------------------
-        # Timeout is a governance failure rather than
-        # malformed SQL, so don't repeatedly ask the LLM
-        # to regenerate another expensive query.
+        #
+        # IMPORTANT:
+        #
+        # Authorization and timeout failures must NOT be
+        # sent back to the LLM.
+        #
+        # Example:
+        #
+        # viewer asks:
+        # "Show me employee salaries"
+        #
+        # SQL:
+        # SELECT salary FROM employees
+        #
+        # SQLite authorizer:
+        # authorization_denied
+        #
+        # QueryMind stops here instead of asking the LLM
+        # to generate a different query.
         # -------------------------------------------------
 
-        if result.get("error_type") == "query_timeout":
+        if result.get("error_type") in {
+            "query_timeout",
+            "authorization_denied",
+            "query_not_allowed",
+        }:
             return {
-                "final_sql": None,
+                "final_sql": sql,
                 "results": None,
                 "error": result["error"],
-                "error_type": "query_timeout",
+                "error_type": result["error_type"],
                 "attempts": attempts,
             }
 
         # -------------------------------------------------
         # SQL self-correction
+        # -------------------------------------------------
+        #
+        # Only ordinary SQL execution errors are given
+        # back to the LLM for another attempt.
         # -------------------------------------------------
 
         error_context = result["error"]
@@ -452,8 +508,10 @@ def generate_and_run(
     return {
         "final_sql": None,
         "results": None,
-        "error":
-            f"Failed after {max_retries} attempts.",
+        "error": (
+            f"Failed after {max_retries} attempts."
+        ),
+        "error_type": "max_retries_exceeded",
         "attempts": attempts,
     }
 
