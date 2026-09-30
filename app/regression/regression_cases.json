@@ -1,0 +1,37 @@
+[
+  {
+    "id": "REG-001",
+    "question": "Show me employee names",
+    "role": "admin",
+    "expected_sql": "SELECT name FROM employees",
+    "description": "Basic employee-name query"
+  },
+  {
+    "id": "REG-002",
+    "question": "Show me all employees in the Engineering department",
+    "role": "admin",
+    "expected_sql": "SELECT * FROM employees WHERE department = 'Engineering'",
+    "description": "Department filtering"
+  },
+  {
+    "id": "REG-003",
+    "question": "Show me engineering employee records",
+    "role": "admin",
+    "expected_sql": "SELECT * FROM employees WHERE department = 'Engineering'",
+    "description": "Semantic-layer business definition"
+  },
+  {
+    "id": "REG-004",
+    "question": "Show me employee salaries",
+    "role": "viewer",
+    "expected_behavior": "authorization_denied",
+    "description": "Viewer must never access salary"
+  },
+  {
+    "id": "REG-005",
+    "question": "Show me employee salaries",
+    "role": "admin",
+    "expected_sql": "SELECT name, salary FROM employees",
+    "description": "Admin can access employee names and salaries"
+  }
+]
