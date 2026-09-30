@@ -7,10 +7,13 @@ from groq import Groq
 from dotenv import load_dotenv
 
 from app.rag.retriever import get_relevant_schema
+
 from app.app.governance import (
     enforce_row_limit,
     apply_authorizer,
 )
+
+from app.app.semantic_layer import build_semantic_context
 
 
 # ---------------------------------------------------------
@@ -99,6 +102,25 @@ def generate_sql(
     error_context: str = "",
 ) -> dict:
 
+    # -----------------------------------------------------
+    # Semantic business layer
+    # -----------------------------------------------------
+    # Retrieve approved business definitions that match
+    # the natural-language question.
+    #
+    # Example:
+    # "active employee"
+    # becomes:
+    # employees.status = 'active'
+    # -----------------------------------------------------
+
+    semantic_context = build_semantic_context(question)
+
+    if not semantic_context:
+        semantic_context = (
+            "No approved business definition matched this question."
+        )
+
     correction_note = ""
 
     if error_context:
@@ -113,10 +135,20 @@ Please fix the SQL query to avoid this error.
 You are an expert SQL generator.
 
 Given a database schema and a question,
-generate a SQL query.
+generate a read-only SQL query.
 
 Schema:
 {schema}
+
+Semantic business context:
+{semantic_context}
+
+Important semantic-layer rules:
+- Approved business definitions are authoritative.
+- If an approved definition is provided, use its SQL rule.
+- Do not invent a different meaning for an approved business term.
+- Do not invent business definitions when none are provided.
+- Generate only read-only SELECT SQL.
 
 {correction_note}
 
@@ -167,7 +199,7 @@ nothing else:
 
 
 # ---------------------------------------------------------
-# SQL execution with database-level RBAC
+# SQL execution with governance
 # ---------------------------------------------------------
 
 def execute_query(
@@ -185,6 +217,10 @@ def execute_query(
     3. Long-running queries are interrupted after the
        configured timeout.
     """
+
+    # -----------------------------------------------------
+    # SELECT-only protection
+    # -----------------------------------------------------
 
     if not sql.strip().upper().startswith("SELECT"):
         return {
@@ -227,14 +263,16 @@ def execute_query(
 
             return 0
 
-        # SQLite periodically calls progress_handler().
+        # SQLite periodically calls this callback.
         # Returning 1 interrupts query execution.
+
         conn.set_progress_handler(
             progress_handler,
             1000,
         )
 
         cursor = conn.cursor()
+
         cursor.execute(sql)
 
         columns = [
@@ -279,8 +317,11 @@ def execute_query(
             )
 
             conn.close()
+
+
 # ---------------------------------------------------------
-# NL -> SQL -> Governance -> RBAC -> Execution
+# NL -> Schema -> Semantic Layer -> SQL
+# -> Governance -> RBAC -> Execution
 # ---------------------------------------------------------
 
 def generate_and_run(
@@ -290,10 +331,12 @@ def generate_and_run(
 ):
     """
     Convert a natural-language question into SQL,
-    apply governance controls, execute the query,
-    and retry failed SQL when appropriate.
+    apply semantic definitions and governance controls,
+    execute the query, and retry malformed SQL when
+    appropriate.
     """
 
+    # Retrieve relevant database schema using RAG.
     schema = get_relevant_schema(question)
 
     attempts = []
@@ -303,6 +346,15 @@ def generate_and_run(
         1,
         max_retries + 1,
     ):
+
+        # -------------------------------------------------
+        # Generate SQL
+        #
+        # generate_sql() now combines:
+        # - retrieved database schema
+        # - approved semantic business definitions
+        # - retry error context
+        # -------------------------------------------------
 
         sql_response = generate_sql(
             question,
@@ -341,12 +393,7 @@ def generate_and_run(
         )
 
         # -------------------------------------------------
-        # Execute using requester's role.
-        #
-        # execute_query() now applies:
-        # - SELECT-only enforcement
-        # - SQLite RBAC
-        # - query execution timeout
+        # Execute with RBAC + timeout
         # -------------------------------------------------
 
         result = execute_query(
@@ -366,6 +413,10 @@ def generate_and_run(
             }
         )
 
+        # -------------------------------------------------
+        # Successful execution
+        # -------------------------------------------------
+
         if result["success"]:
             return {
                 "final_sql": sql,
@@ -375,8 +426,14 @@ def generate_and_run(
                 "attempts": attempts,
             }
 
-        # A timeout is a governance failure, not malformed SQL.
-        # Do not ask the LLM to regenerate the query repeatedly.
+        # -------------------------------------------------
+        # Timeout handling
+        # -------------------------------------------------
+        # Timeout is a governance failure rather than
+        # malformed SQL, so don't repeatedly ask the LLM
+        # to regenerate another expensive query.
+        # -------------------------------------------------
+
         if result.get("error_type") == "query_timeout":
             return {
                 "final_sql": None,
@@ -385,6 +442,10 @@ def generate_and_run(
                 "error_type": "query_timeout",
                 "attempts": attempts,
             }
+
+        # -------------------------------------------------
+        # SQL self-correction
+        # -------------------------------------------------
 
         error_context = result["error"]
 
@@ -416,4 +477,4 @@ if __name__ == "__main__":
     print(
         "Final result:",
         result,
-    ) 
+    )
