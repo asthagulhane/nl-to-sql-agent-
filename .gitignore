@@ -4,3 +4,6 @@ __pycache__/
 .env
 app/rag/schema_index.faiss
 app/rag/table_data.pkl
+
+.env
+audit.log
