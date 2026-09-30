@@ -3,7 +3,7 @@ import os
 import re
 from datetime import datetime, timezone
 
-AUDIT_LOG_PATH = os.path.join(os.path.dirname(__file__), "..", "audit.log")
+AUDIT_LOG_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "audit.log")
 
 # Columns hidden from specific roles. Extend this as the schema grows.
 RESTRICTED_COLUMNS = {
