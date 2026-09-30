@@ -6,27 +6,27 @@ from groq import Groq
 from dotenv import load_dotenv
 
 from app.rag.retriever import get_relevant_schema
-from app.app.governance import enforce_row_limit
+from app.app.governance import (
+    enforce_row_limit,
+    apply_authorizer,
+)
 
 
 # ---------------------------------------------------------
 # Environment configuration
 # ---------------------------------------------------------
 
-# llm_service.py is located at:
+# llm_service.py:
 # app/app/llm_service.py
 #
-# The .env file containing GROQ_API_KEY is located at:
+# Environment file:
 # app/.env
-#
-# Build the path explicitly so the application works
-# regardless of the directory from which Python is started.
 
 ENV_PATH = os.path.abspath(
     os.path.join(
         os.path.dirname(__file__),
         "..",
-        ".env"
+        ".env",
     )
 )
 
@@ -48,41 +48,44 @@ client = Groq(api_key=GROQ_API_KEY)
 
 def get_schema(db_path="sample.db"):
     conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
 
-    cursor.execute(
-        "SELECT name FROM sqlite_master WHERE type='table';"
-    )
+    try:
+        cursor = conn.cursor()
 
-    tables = [
-        row[0]
-        for row in cursor.fetchall()
-    ]
-
-    schema_description = ""
-
-    for table in tables:
         cursor.execute(
-            f"PRAGMA table_info({table});"
+            "SELECT name FROM sqlite_master WHERE type='table';"
         )
 
-        columns = cursor.fetchall()
+        tables = [
+            row[0]
+            for row in cursor.fetchall()
+        ]
 
-        column_desc = ", ".join(
-            [
-                f"{col[1]} ({col[2]})"
-                for col in columns
-            ]
-        )
+        schema_description = ""
 
-        schema_description += (
-            f"Table '{table}': "
-            f"columns are {column_desc}\n"
-        )
+        for table in tables:
+            cursor.execute(
+                f"PRAGMA table_info({table});"
+            )
 
-    conn.close()
+            columns = cursor.fetchall()
 
-    return schema_description
+            column_desc = ", ".join(
+                [
+                    f"{col[1]} ({col[2]})"
+                    for col in columns
+                ]
+            )
+
+            schema_description += (
+                f"Table '{table}': "
+                f"columns are {column_desc}\n"
+            )
+
+        return schema_description
+
+    finally:
+        conn.close()
 
 
 # ---------------------------------------------------------
@@ -92,7 +95,7 @@ def get_schema(db_path="sample.db"):
 def generate_sql(
     question: str,
     schema: str,
-    error_context: str = ""
+    error_context: str = "",
 ) -> dict:
 
     correction_note = ""
@@ -134,7 +137,7 @@ nothing else:
         messages=[
             {
                 "role": "user",
-                "content": prompt
+                "content": prompt,
             }
         ],
         temperature=0.2,
@@ -156,32 +159,53 @@ nothing else:
             "sql": raw_text,
             "confidence": 0,
             "reasoning":
-                "Could not parse structured response."
+                "Could not parse structured response.",
         }
 
     return parsed
 
 
 # ---------------------------------------------------------
-# SQL execution
+# SQL execution with database-level RBAC
 # ---------------------------------------------------------
 
 def execute_query(
     sql: str,
-    db_path="sample.db"
+    db_path="sample.db",
+    role: str = "viewer",
 ):
+    """
+    Execute a read-only SQL query.
 
-    # Safety layer:
-    # Only read-only SELECT queries are permitted.
+    Security layers:
+    1. Only SELECT statements are accepted.
+    2. SQLite authorizer enforces role-based column access.
+    """
+
     if not sql.strip().upper().startswith("SELECT"):
         return {
             "success": False,
             "error":
-                "Only SELECT statements are allowed."
+                "Only SELECT statements are allowed.",
         }
+
+    conn = None
 
     try:
         conn = sqlite3.connect(db_path)
+
+        # -------------------------------------------------
+        # Database-level RBAC
+        # -------------------------------------------------
+        # The SQLite authorizer blocks restricted columns
+        # before SQLite returns their data.
+        # -------------------------------------------------
+
+        apply_authorizer(
+            conn,
+            role,
+        )
+
         cursor = conn.cursor()
 
         cursor.execute(sql)
@@ -193,8 +217,6 @@ def execute_query(
 
         rows = cursor.fetchall()
 
-        conn.close()
-
         results = [
             dict(zip(columns, row))
             for row in rows
@@ -202,27 +224,30 @@ def execute_query(
 
         return {
             "success": True,
-            "results": results
+            "results": results,
         }
 
-    except sqlite3.Error as e:
+    except sqlite3.Error as error:
         return {
             "success": False,
-            "error": str(e)
+            "error": str(error),
         }
+
+    finally:
+        if conn is not None:
+            conn.close()
 
 
 # ---------------------------------------------------------
-# NL -> SQL -> Governance -> Execution
+# NL -> SQL -> Governance -> RBAC -> Execution
 # ---------------------------------------------------------
 
 def generate_and_run(
     question: str,
-    max_retries: int = 3
+    role: str = "viewer",
+    max_retries: int = 3,
 ):
 
-    # Retrieve only the schema relevant
-    # to the natural-language question.
     schema = get_relevant_schema(question)
 
     attempts = []
@@ -230,16 +255,19 @@ def generate_and_run(
 
     for attempt_number in range(
         1,
-        max_retries + 1
+        max_retries + 1,
     ):
 
         sql_response = generate_sql(
             question,
             schema,
-            error_context
+            error_context,
         )
 
-        sql = sql_response.get("sql", "")
+        sql = sql_response.get(
+            "sql",
+            "",
+        )
 
         if not sql:
             return {
@@ -247,43 +275,44 @@ def generate_and_run(
                 "results": None,
                 "error":
                     "The LLM did not return a SQL query.",
-                "attempts": attempts
+                "attempts": attempts,
             }
 
         # -------------------------------------------------
-        # Governance layer
-        # -------------------------------------------------
-        # Automatically enforce the maximum row limit.
-        #
-        # Example:
-        # SELECT * FROM employees
-        #
-        # becomes:
-        # SELECT * FROM employees LIMIT 100;
+        # Row-limit governance
         # -------------------------------------------------
 
         sql = enforce_row_limit(sql)
 
         confidence = sql_response.get(
             "confidence",
-            0
+            0,
         )
 
         reasoning = sql_response.get(
             "reasoning",
-            ""
+            "",
         )
 
-        result = execute_query(sql)
+        # -------------------------------------------------
+        # Execute using the requester's role
+        # -------------------------------------------------
 
-        attempts.append({
-            "attempt": attempt_number,
-            "sql": sql,
-            "confidence": confidence,
-            "reasoning": reasoning,
-            "success": result["success"],
-            "error": result.get("error")
-        })
+        result = execute_query(
+            sql,
+            role=role,
+        )
+
+        attempts.append(
+            {
+                "attempt": attempt_number,
+                "sql": sql,
+                "confidence": confidence,
+                "reasoning": reasoning,
+                "success": result["success"],
+                "error": result.get("error"),
+            }
+        )
 
         if result["success"]:
             return {
@@ -291,7 +320,7 @@ def generate_and_run(
                 "confidence": confidence,
                 "reasoning": reasoning,
                 "results": result["results"],
-                "attempts": attempts
+                "attempts": attempts,
             }
 
         error_context = result["error"]
@@ -301,7 +330,7 @@ def generate_and_run(
         "results": None,
         "error":
             f"Failed after {max_retries} attempts.",
-        "attempts": attempts
+        "attempts": attempts,
     }
 
 
@@ -317,10 +346,11 @@ if __name__ == "__main__":
     )
 
     result = generate_and_run(
-        test_question
+        test_question,
+        role="viewer",
     )
 
     print(
         "Final result:",
-        result
+        result,
     )
