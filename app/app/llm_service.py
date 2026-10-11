@@ -15,7 +15,6 @@ from app.app.governance import (
 
 from app.app.semantic_layer import build_semantic_context
 
-
 # ---------------------------------------------------------
 # Environment configuration
 # ---------------------------------------------------------
@@ -94,6 +93,7 @@ def generate_sql(
     question: str,
     schema: str,
     error_context: str = "",
+    role: str = "viewer",
 ) -> dict:
 
     # -----------------------------------------------------
@@ -136,8 +136,11 @@ Important semantic-layer rules:
 - Do not invent business definitions when none are provided.
 - Generate only read-only SELECT SQL.
 - Answer the user's requested data directly.
-- Do not silently replace requested restricted columns with unrelated columns.
-
+- The current user's role is: {role}
+- Do not use SELECT * when the role is not allowed to read every column.
+- Do not select restricted columns for roles that are not authorized to read them.
+- If the user explicitly requests a restricted column, generate the query normally and let the database authorization layer enforce access.
+- Do not silently replace an explicitly requested restricted column with an unrelated column.
 {correction_note}
 
 Question:
@@ -387,10 +390,11 @@ def generate_and_run(
         # -------------------------------------------------
 
         sql_response = generate_sql(
-            question,
-            schema,
-            error_context,
-        )
+    question,
+    schema,
+    error_context,
+    role,
+)
 
         sql = sql_response.get(
             "sql",
