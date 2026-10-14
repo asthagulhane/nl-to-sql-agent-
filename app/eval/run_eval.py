@@ -1,14 +1,24 @@
+
 import json
 import os
 import sys
+from pathlib import Path
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+# Add the app directory to Python's import path.
+APP_DIR = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(APP_DIR))
 
 from app.llm_service import generate_and_run
 
 
-def load_test_cases(path="eval/test_cases.json"):
-    with open(path) as f:
+def load_test_cases(path=None):
+    """Load evaluation cases from the JSON file beside this script."""
+    if path is None:
+        path = Path(__file__).resolve().parent / "test_cases.json"
+    else:
+        path = Path(path)
+
+    with path.open("r", encoding="utf-8") as f:
         return json.load(f)
 
 
@@ -16,8 +26,9 @@ def evaluate_case(case: dict) -> dict:
     question = case["question"]
     result = generate_and_run(question)
 
-    sql = (result.get("final_sql") or "").upper()
-    executed_successfully = result.get("final_sql") is not None
+    final_sql = result.get("final_sql")
+    sql = (final_sql or "").upper()
+    executed_successfully = final_sql is not None
 
     if case.get("expects_failure"):
         passed = not executed_successfully
@@ -28,7 +39,10 @@ def evaluate_case(case: dict) -> dict:
             passed = case["expects_table"].upper() in sql
 
         if passed and case.get("expects_aggregate"):
-            passed = any(fn in sql for fn in ["COUNT(", "AVG(", "SUM(", "MAX(", "MIN("])
+            passed = any(
+                fn in sql
+                for fn in ["COUNT(", "AVG(", "SUM(", "MAX(", "MIN("]
+            )
 
         if passed and case.get("expects_where"):
             passed = case["expects_where"].upper() in sql
@@ -36,12 +50,14 @@ def evaluate_case(case: dict) -> dict:
         if passed and case.get("expects_order_by"):
             passed = "ORDER BY" in sql
 
+    attempts = result.get("attempts", [])
+
     return {
         "question": question,
         "passed": passed,
-        "sql_generated": result.get("final_sql"),
-        "attempts_used": len(result.get("attempts", [])),
-        "retried": len(result.get("attempts", [])) > 1,
+        "sql_generated": final_sql,
+        "attempts_used": len(attempts),
+        "retried": len(attempts) > 1,
     }
 
 
@@ -56,14 +72,26 @@ def run_evaluation():
     print("\n" + "=" * 60)
     print("EVALUATION RESULTS")
     print("=" * 60)
+
     for r in results:
         status = "PASS" if r["passed"] else "FAIL"
-        retry_note = f" (retried, {r['attempts_used']} attempts)" if r["retried"] else ""
+        retry_note = (
+            f" (retried, {r['attempts_used']} attempts)"
+            if r["retried"]
+            else ""
+        )
+
         print(f"[{status}] {r['question']}{retry_note}")
         print(f"       SQL: {r['sql_generated']}")
 
     print("=" * 60)
-    print(f"Success rate: {passed_count}/{total} ({passed_count/total*100:.1f}%)")
+
+    if total:
+        success_rate = passed_count / total * 100
+        print(f"Success rate: {passed_count}/{total} ({success_rate:.1f}%)")
+    else:
+        print("No evaluation cases found.")
+
     print(f"Queries that needed a retry: {retried_count}/{total}")
     print("=" * 60 + "\n")
 
