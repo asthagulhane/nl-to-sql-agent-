@@ -12,3 +12,7 @@ __pycache__/
 audit.log
 app/rag/schema_index.faiss
 app/rag/table_data.pkl
+
+Dockerfile.backup
+uvicorn-error.log
+uvicorn-out.log
