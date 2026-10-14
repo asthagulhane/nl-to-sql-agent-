@@ -1,6 +1,5 @@
 
 import json
-import os
 import sys
 from pathlib import Path
 
@@ -18,7 +17,7 @@ def load_test_cases(path=None):
     else:
         path = Path(path)
 
-    with path.open("r", encoding="utf-8") as f:
+    with path.open("r", encoding="utf-8-sig") as f:
         return json.load(f)
 
 
