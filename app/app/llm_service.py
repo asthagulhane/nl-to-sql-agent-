@@ -2,6 +2,7 @@ import os
 import sqlite3
 import json
 import time
+from pathlib import Path
 
 from groq import Groq
 from dotenv import load_dotenv
@@ -18,6 +19,9 @@ from app.app.semantic_layer import build_semantic_context
 # ---------------------------------------------------------
 # Environment configuration
 # ---------------------------------------------------------
+
+DATABASE_PATH = str(Path(__file__).resolve().parents[1] / "sample.db")
+
 
 ENV_PATH = os.path.abspath(
     os.path.join(
@@ -43,7 +47,7 @@ client = Groq(api_key=GROQ_API_KEY)
 # Database schema helper
 # ---------------------------------------------------------
 
-def get_schema(db_path="sample.db"):
+def get_schema(db_path=DATABASE_PATH):
     conn = sqlite3.connect(db_path)
 
     try:
@@ -196,7 +200,7 @@ nothing else:
 
 def execute_query(
     sql: str,
-    db_path="sample.db",
+    db_path=DATABASE_PATH,
     role: str = "viewer",
     timeout_seconds: float = 5.0,
 ):

@@ -6,10 +6,7 @@ from typing import Dict, List
 
 
 BUSINESS_DEFINITIONS: Dict[str, Dict[str, str]] = {
-    "active employee": {
-        "description": "An employee whose status is active.",
-        "sql_rule": "employees.status = 'active'",
-    },
+    
     "engineering employee": {
         "description": "An employee who belongs to the Engineering department.",
         "sql_rule": "employees.department = 'Engineering'",

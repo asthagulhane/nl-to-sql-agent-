@@ -1,18 +1,32 @@
+# Python virtual environments
 venv/
 .venv/
+
+# Python generated files
 __pycache__/
 *.py[cod]
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Environment secrets
 .env
 .env.*
 !.env.example
-.ipynb_checkpoints/
-.pytest_cache/
+
+# IDE settings
 .vscode/
 
+# Application logs
 audit.log
+uvicorn-error.log
+uvicorn-out.log
+
+# Generated RAG indexes
 app/rag/schema_index.faiss
 app/rag/table_data.pkl
 
+# Generated regression results
+app/regression/regression_results.json
+
+# Backup files
 Dockerfile.backup
-uvicorn-error.log
-uvicorn-out.log
