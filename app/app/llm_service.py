@@ -9,10 +9,8 @@ from dotenv import load_dotenv
 
 from app.rag.retriever import get_relevant_schema
 
-from app.app.governance import (
-    enforce_row_limit,
-    apply_authorizer,
-)
+from app.app.governance import enforce_row_limit, MAX_ROWS
+from app.app.security import open_readonly_connection
 
 from app.app.semantic_layer import build_semantic_context
 
