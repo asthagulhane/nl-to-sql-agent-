@@ -3,15 +3,16 @@ import os
 import pickle
 from functools import lru_cache
 
-import faiss
-from sentence_transformers import SentenceTransformer
-
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 @lru_cache(maxsize=1)
 def _load_retriever():
     """Load the embedding model and local FAISS artifacts on first retrieval."""
+    # Import heavyweight ML dependencies only when retrieval is actually requested.
+    import faiss
+    from sentence_transformers import SentenceTransformer
+
     model_name = os.getenv("QUERYMIND_EMBEDDING_MODEL", "all-MiniLM-L6-v2")
     model = SentenceTransformer(model_name)
     index_path = os.path.join(BASE_DIR, "schema_index.faiss")
