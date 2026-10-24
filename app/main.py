@@ -107,7 +107,7 @@ def query(
     if not question:
         raise HTTPException(status_code=422, detail="Question must not be empty.")
     if len(question) > 1000:
-        raise HTTPException(status_code=413, detail="Question is too long (maximum 1000 characters)."
+        raise HTTPException(status_code=413, detail="Question is too long (maximum 1000 characters).")
 
     # -----------------------------------------------------
     # Generate and execute SQL
@@ -125,7 +125,7 @@ def query(
     # -----------------------------------------------------
 
     result = generate_and_run(
-        request.question,
+        question,
         role=role,
     )
 
