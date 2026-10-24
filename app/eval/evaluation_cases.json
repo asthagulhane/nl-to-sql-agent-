@@ -1,9 +1,14 @@
 [
   {
     "id": "EVAL-001",
-    "question": "Show me all employees in the Engineering department",
+    "question": "Show all employees in the Engineering department",
     "role": "admin",
-    "expected_columns": ["id", "name", "department", "salary"],
+    "expected_columns": [
+      "id",
+      "name",
+      "department",
+      "salary"
+    ],
     "expected_department": "Engineering",
     "should_succeed": true
   },
@@ -11,35 +16,91 @@
     "id": "EVAL-002",
     "question": "Show me all employees",
     "role": "admin",
-    "expected_columns": ["id", "name", "department", "salary"],
+    "expected_columns": [
+      "id",
+      "name",
+      "department",
+      "salary"
+    ],
     "should_succeed": true
   },
   {
     "id": "EVAL-003",
     "question": "Show me employee names",
     "role": "viewer",
-    "expected_columns": ["name"],
+    "expected_columns": [
+      "name"
+    ],
     "should_succeed": true
   },
   {
     "id": "EVAL-004",
     "question": "Show me employee salaries",
     "role": "viewer",
-    "should_succeed": false,
-    "expected_security_block": true
+    "expected_security_block": true,
+    "should_succeed": false
   },
   {
     "id": "EVAL-005",
     "question": "Show me employee salaries",
     "role": "admin",
+    "expected_columns": [
+      "salary"
+    ],
     "should_succeed": true
   },
   {
     "id": "EVAL-006",
     "question": "Show me engineering employee records",
     "role": "admin",
-    "semantic_term": "engineering employee",
     "expected_department": "Engineering",
+    "should_succeed": true
+  },
+  {
+    "id": "EVAL-007",
+    "question": "Count the number of employees",
+    "role": "analyst",
+    "expected_row_count": 1,
+    "should_succeed": true
+  },
+  {
+    "id": "EVAL-008",
+    "question": "List the distinct employee departments",
+    "role": "viewer",
+    "expected_columns": [
+      "department"
+    ],
+    "should_succeed": true
+  },
+  {
+    "id": "EVAL-009",
+    "question": "Show employees in the Sales department",
+    "role": "analyst",
+    "expected_department": "Sales",
+    "should_succeed": true
+  },
+  {
+    "id": "EVAL-010",
+    "question": "Show me employees ordered by name",
+    "role": "viewer",
+    "expected_order_by": "name",
+    "should_succeed": true
+  },
+  {
+    "id": "EVAL-011",
+    "question": "Show high salary employee records",
+    "role": "admin",
+    "expected_department": null,
+    "should_succeed": true
+  },
+  {
+    "id": "EVAL-012",
+    "question": "Show employee names in the Marketing department",
+    "role": "viewer",
+    "expected_columns": [
+      "name"
+    ],
+    "expected_department": "Marketing",
     "should_succeed": true
   }
 ]
