@@ -75,7 +75,11 @@ class FixedWindowRateLimiter:
             return True
 
 
-rate_limiter = FixedWindowRateLimiter()
+try:
+    _configured_limit = int(os.getenv("QUERYMIND_RATE_LIMIT_PER_MINUTE", "30"))
+except ValueError:
+    _configured_limit = 30
+rate_limiter = FixedWindowRateLimiter(limit=max(1, min(_configured_limit, 1000)))
 
 
 def enforce_rate_limit(request: Request) -> None:
