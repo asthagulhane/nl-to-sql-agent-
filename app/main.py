@@ -1,15 +1,12 @@
 import os
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from app.app.llm_service import generate_and_run
-from app.app.governance import (
-    mask_results,
-    log_audit_entry,
-    normalize_role,
-)
+from app.app.governance import mask_results, log_audit_entry
+from app.app.security import role_for_api_key, enforce_rate_limit
 
 
 # ---------------------------------------------------------
@@ -48,7 +45,11 @@ FRONTEND_PATH = os.path.join(
 
 class QuestionRequest(BaseModel):
     question: str
-    role: str = "viewer"
+
+    class Config:
+        str_strip_whitespace = True
+        extra = "ignore"
+
 
 
 # ---------------------------------------------------------
@@ -79,7 +80,11 @@ def serve_frontend():
 # ---------------------------------------------------------
 
 @app.post("/query")
-def query(request: QuestionRequest):
+def query(
+    request: QuestionRequest,
+    http_request: Request,
+    x_api_key: str | None = Header(default=None, alias="X-API-Key"),
+):
     """
     Convert a natural-language question into SQL and
     execute it through the governance pipeline.
@@ -93,13 +98,16 @@ def query(request: QuestionRequest):
     - audit logging
     """
 
-    # -----------------------------------------------------
-    # Normalize role
-    # -----------------------------------------------------
+    # Identity and role come from a server-side API key mapping.
+    # Never trust a role supplied by the caller.
+    enforce_rate_limit(http_request)
+    role = role_for_api_key(x_api_key)
 
-    role = normalize_role(
-        request.role
-    )
+    question = request.question.strip()
+    if not question:
+        raise HTTPException(status_code=422, detail="Question must not be empty.")
+    if len(question) > 1000:
+        raise HTTPException(status_code=413, detail="Question is too long (maximum 1000 characters).")
 
     # -----------------------------------------------------
     # Generate and execute SQL
@@ -117,7 +125,7 @@ def query(request: QuestionRequest):
     # -----------------------------------------------------
 
     result = generate_and_run(
-        request.question,
+        question,
         role=role,
     )
 
@@ -151,7 +159,7 @@ def query(request: QuestionRequest):
 
     log_audit_entry(
         role=role,
-        question=request.question,
+        question=question,
         sql=result.get("final_sql"),
         row_count=row_count,
         success=success,

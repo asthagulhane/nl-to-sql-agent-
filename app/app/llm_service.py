@@ -9,10 +9,8 @@ from dotenv import load_dotenv
 
 from app.rag.retriever import get_relevant_schema
 
-from app.app.governance import (
-    enforce_row_limit,
-    apply_authorizer,
-)
+from app.app.governance import enforce_row_limit, MAX_ROWS
+from app.app.security import open_readonly_connection
 
 from app.app.semantic_layer import build_semantic_context
 
@@ -204,167 +202,51 @@ def execute_query(
     role: str = "viewer",
     timeout_seconds: float = 5.0,
 ):
-    """
-    Execute a read-only SQL query with governance controls.
+    """Execute one read-only query with column RBAC, timeout, and a hard result cap."""
+    if not isinstance(sql, str) or not sql.strip():
+        return {"success": False, "error": "A SQL query is required.", "error_type": "query_not_allowed"}
 
-    Security layers:
-    1. Only SELECT statements are accepted.
-    2. SQLite authorizer enforces role-based column access.
-    3. Long-running queries are interrupted after the
-       configured timeout.
-    """
-
-    # -----------------------------------------------------
-    # SELECT-only protection
-    # -----------------------------------------------------
-
-    normalized_sql = sql.strip().upper()
-
-    # Allow normal SELECT statements and read-only
-    # CTE queries beginning with WITH.
-    if not (
-        normalized_sql.startswith("SELECT")
-        or normalized_sql.startswith("WITH")
-    ):
-        return {
-            "success": False,
-            "error": "Only SELECT statements are allowed.",
-            "error_type": "query_not_allowed",
-        }
+    normalized_sql = sql.lstrip().upper()
+    if not (normalized_sql.startswith("SELECT") or normalized_sql.startswith("WITH")):
+        return {"success": False, "error": "Only read-only SELECT queries are allowed.", "error_type": "query_not_allowed"}
 
     conn = None
     timed_out = False
-
     try:
-        conn = sqlite3.connect(db_path)
-
-        # -------------------------------------------------
-        # Database-level RBAC
-        # -------------------------------------------------
-
-        apply_authorizer(
-            conn,
-            role,
-        )
-
-        # -------------------------------------------------
-        # Query execution timeout
-        # -------------------------------------------------
-
+        conn = open_readonly_connection(db_path, role, timeout_seconds=timeout_seconds)
         start_time = time.monotonic()
 
         def progress_handler():
             nonlocal timed_out
-
-            elapsed = (
-                time.monotonic()
-                - start_time
-            )
-
-            if elapsed >= timeout_seconds:
+            if time.monotonic() - start_time >= timeout_seconds:
                 timed_out = True
                 return 1
-
             return 0
 
-        conn.set_progress_handler(
-            progress_handler,
-            1000,
-        )
-
+        conn.set_progress_handler(progress_handler, 1000)
         cursor = conn.cursor()
         cursor.execute(sql)
-
-        # A valid read query should produce a description.
         if cursor.description is None:
-            return {
-                "success": False,
-                "error": "Query did not produce a result set.",
-                "error_type": "sql_execution_error",
-            }
+            return {"success": False, "error": "Query did not produce a result set.", "error_type": "query_not_allowed"}
 
-        columns = [
-            description[0]
-            for description in cursor.description
-        ]
-
-        rows = cursor.fetchall()
-
-        results = [
-            dict(zip(columns, row))
-            for row in rows
-        ]
-
-        return {
-            "success": True,
-            "results": results,
-        }
-
-    except sqlite3.Error as error:
-
-        error_message = str(error)
-
-        # -------------------------------------------------
-        # Timeout governance failure
-        # -------------------------------------------------
-
+        columns = [description[0] for description in cursor.description]
+        rows = cursor.fetchmany(MAX_ROWS + 1)
+        capped = len(rows) > MAX_ROWS
+        rows = rows[:MAX_ROWS]
+        results = [dict(zip(columns, row)) for row in rows]
+        return {"success": True, "results": results, "truncated": capped}
+    except (sqlite3.Error, ValueError, OSError) as error:
         if timed_out:
-            return {
-                "success": False,
-                "error": (
-                    "Query execution exceeded "
-                    f"{timeout_seconds} seconds."
-                ),
-                "error_type": "query_timeout",
-            }
-
-        # -------------------------------------------------
-        # RBAC / authorization failure
-        # -------------------------------------------------
-        #
-        # An authorization failure is a security decision.
-        # It must not be passed back to the LLM for
-        # self-correction because the model could generate
-        # another query that changes the user's request.
-        # -------------------------------------------------
-
-        lowered_error = error_message.lower()
-
-        if (
-            "prohibited" in lowered_error
-            or "not authorized" in lowered_error
-            or "authorization denied" in lowered_error
-        ):
-            return {
-                "success": False,
-                "error": error_message,
-                "error_type": "authorization_denied",
-            }
-
-        # -------------------------------------------------
-        # Ordinary SQL execution error
-        # -------------------------------------------------
-
-        return {
-            "success": False,
-            "error": error_message,
-            "error_type": "sql_execution_error",
-        }
-
+            return {"success": False, "error": f"Query execution exceeded {timeout_seconds} seconds.", "error_type": "query_timeout"}
+        lowered = str(error).lower()
+        if any(marker in lowered for marker in ("prohibited", "not authorized", "authorization denied", "access to")):
+            return {"success": False, "error": "The requested query is not authorized for this role.", "error_type": "authorization_denied"}
+        return {"success": False, "error": "The query could not be executed safely.", "error_type": "sql_execution_error"}
     finally:
         if conn is not None:
-            conn.set_progress_handler(
-                None,
-                0,
-            )
-
+            conn.set_progress_handler(None, 0)
             conn.close()
 
-
-# ---------------------------------------------------------
-# NL -> Schema -> Semantic Layer -> SQL
-# -> Governance -> RBAC -> Execution
-# ---------------------------------------------------------
 
 def generate_and_run(
     question: str,
