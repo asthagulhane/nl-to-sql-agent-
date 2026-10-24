@@ -50,3 +50,20 @@ def test_readonly_connection_blocks_mutation_and_allows_select(tmp_path):
             conn.execute("PRAGMA user_version")
     finally:
         conn.close()
+
+
+def test_execute_query_hard_caps_returned_rows(tmp_path):
+    from app.app.governance import MAX_ROWS
+    from app.app.llm_service import execute_query
+
+    db = tmp_path / "many_rows.db"
+    writer = sqlite3.connect(db)
+    writer.execute("CREATE TABLE items (id INTEGER PRIMARY KEY)")
+    writer.executemany("INSERT INTO items (id) VALUES (?)", [(i,) for i in range(MAX_ROWS + 25)])
+    writer.commit()
+    writer.close()
+
+    result = execute_query("SELECT id FROM items", db_path=str(db), role="admin")
+    assert result["success"] is True
+    assert len(result["results"]) == MAX_ROWS
+    assert result["truncated"] is True
