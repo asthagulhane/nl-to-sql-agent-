@@ -1,4 +1,4 @@
-# Python virtual environments
+﻿# Python virtual environments
 venv/
 .venv/
 
@@ -15,18 +15,23 @@ __pycache__/
 
 # IDE settings
 .vscode/
+.idea/
 
 # Application logs
+*.log
 audit.log
 uvicorn-error.log
 uvicorn-out.log
 
-# Generated RAG indexes
-app/rag/schema_index.faiss
-app/rag/table_data.pkl
+# Local backups
+*.bak
+*.before-router.bak
 
-# Generated regression results
-app/regression/regression_results.json
+# Local databases
+*.db
+*.sqlite
+*.sqlite3
 
-# Backup files
-Dockerfile.backup
+# Operating system files
+.DS_Store
+Thumbs.db
