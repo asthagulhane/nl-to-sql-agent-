@@ -113,6 +113,6 @@ def open_readonly_connection(db_path: str | Path, role: str, timeout_seconds: fl
         raise FileNotFoundError("Configured database file does not exist.")
     uri = path.as_uri() + "?mode=ro"
     connection = sqlite3.connect(uri, uri=True, timeout=timeout_seconds)
-    connection.set_authorizer(create_readonly_authorizer(role))
     connection.execute("PRAGMA query_only = ON")
+    connection.set_authorizer(create_readonly_authorizer(role))
     return connection
