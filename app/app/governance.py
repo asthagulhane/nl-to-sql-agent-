@@ -6,11 +6,9 @@ from datetime import datetime, timezone
 
 
 AUDIT_LOG_PATH = os.path.abspath(
-    os.path.join(
-        os.path.dirname(__file__),
-        "..",
-        "..",
-        "audit.log",
+    os.getenv(
+        "QUERYMIND_AUDIT_LOG_PATH",
+        os.path.join(os.path.dirname(__file__), "..", "..", "audit.log"),
     )
 )
 
