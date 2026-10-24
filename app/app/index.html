@@ -46,8 +46,13 @@
     <p>Ask a question about the employee database in plain English.</p>
 
     <!-- Just an input + button, no <form> needed since we're using fetch() -->
+    <label for="api-key-input">API key</label><br>
+    <input type="password" id="api-key-input" autocomplete="off" placeholder="Paste your QueryMind API key" style="width:70%;padding:8px;margin:6px 0 12px;">
+    <br>
+    <label for="question-input">Question</label><br>
     <input type="text" id="question-input" placeholder="e.g. Show me all employees in Engineering">
     <button onclick="askQuestion()">Ask</button>
+    <p id="error-message" role="alert" style="color:#a00;"></p>
 
     <div id="sql-box" style="display: none;"></div>
     <details id="attempts-box" style="display: none;">
@@ -58,17 +63,35 @@
 
     <script>
         async function askQuestion() {
-            const question = document.getElementById("question-input").value;
-            if (!question) return;
+            const question = document.getElementById("question-input").value.trim();
+            const apiKey = document.getElementById("api-key-input").value;
+            const errorBox = document.getElementById("error-message");
+            errorBox.textContent = "";
+            if (!question || !apiKey) {
+                errorBox.textContent = "Enter both a question and your API key.";
+                return;
+            }
 
-            // Call our own FastAPI backend's /query endpoint
-            const response = await fetch("/query", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ question: question })
-            });
-
-            const data = await response.json();
+            let response;
+            let data;
+            try {
+                response = await fetch("/query", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-API-Key": apiKey
+                    },
+                    body: JSON.stringify({ question: question })
+                });
+                data = await response.json();
+            } catch (error) {
+                errorBox.textContent = "Could not reach QueryMind API.";
+                return;
+            }
+            if (!response.ok) {
+                errorBox.textContent = data.detail || "The request was rejected.";
+                return;
+            }
 
             // Show the generated SQL
             const sqlBox = document.getElementById("sql-box");
