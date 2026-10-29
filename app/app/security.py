@@ -19,6 +19,7 @@ from fastapi import HTTPException, Request
 def role_for_api_key(candidate: Optional[str]) -> str:
     """Map a supplied API key to a role using server-side configuration."""
     if not candidate:
+        security_events.record("auth_missing_api_key", "medium")
         raise HTTPException(status_code=401, detail="A valid X-API-Key header is required.")
 
     configured = (
@@ -40,6 +41,7 @@ def role_for_api_key(candidate: Optional[str]) -> str:
             status_code=503,
             detail="API authentication is not configured on this server.",
         )
+    security_events.record("auth_invalid_api_key", "high")
     raise HTTPException(status_code=401, detail="Invalid API key.")
 
 
@@ -85,6 +87,7 @@ rate_limiter = FixedWindowRateLimiter(limit=max(1, min(_configured_limit, 1000))
 def enforce_rate_limit(request: Request) -> None:
     client_host = request.client.host if request.client else "unknown"
     if not rate_limiter.allow(client_host):
+        security_events.record("rate_limit_exceeded", "high", client_host)
         raise HTTPException(status_code=429, detail="Rate limit exceeded. Try again shortly.")
 
 
@@ -120,3 +123,33 @@ def open_readonly_connection(db_path: str | Path, role: str, timeout_seconds: fl
     connection.execute("PRAGMA query_only = ON")
     connection.set_authorizer(create_readonly_authorizer(role))
     return connection
+
+
+class SecurityEventTracker:
+    """Thread-safe, bounded in-memory tracker for security events."""
+
+    def __init__(self, max_events: int = 1000):
+        from collections import deque
+
+        self._events = deque(maxlen=max(1, max_events))
+        self._lock = threading.Lock()
+
+    def record(self, event_type: str, severity: str = "medium", client_id: str = "unknown") -> None:
+        from datetime import datetime, timezone
+
+        event = {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "event_type": str(event_type)[:80],
+            "severity": severity if severity in {"low", "medium", "high", "critical"} else "medium",
+            "client_id": str(client_id)[:100],
+        }
+        with self._lock:
+            self._events.append(event)
+
+    def recent(self, limit: int = 50) -> list[dict]:
+        limit = max(1, min(limit, 200))
+        with self._lock:
+            return list(reversed(list(self._events)[-limit:]))
+
+
+security_events = SecurityEventTracker()
