@@ -1,146 +1,87 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>NL-to-SQL Agent</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 700px;
-            margin: 40px auto;
-            padding: 0 20px;
-        }
-        input[type="text"] {
-            width: 70%;
-            padding: 8px;
-            font-size: 16px;
-        }
-        button {
-            padding: 8px 16px;
-            font-size: 16px;
-            cursor: pointer;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-        th, td {
-            border: 1px solid #ccc;
-            padding: 8px;
-            text-align: left;
-        }
-        #sql-box {
-            background: #f4f4f4;
-            padding: 10px;
-            margin-top: 15px;
-            font-family: monospace;
-        }
-        details {
-            margin-top: 10px;
-        }
-    </style>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>QueryMind | Governed Analytics</title>
+<style>
+:root{color-scheme:dark;--bg:#070a11;--panel:rgba(15,21,34,.82);--panel2:#101827;--line:rgba(142,164,204,.16);--muted:#8794ad;--text:#edf4ff;--teal:#43f0cf;--purple:#a78bfa;--blue:#73b7ff;--red:#ff718b;--green:#64e8b4}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:radial-gradient(ellipse at 70% -10%,#172a46 0,transparent 38%),radial-gradient(ellipse at 0 45%,#102b2d 0,transparent 30%),var(--bg);color:var(--text);font:14px/1.5 Inter,Segoe UI,Arial,sans-serif;min-height:100vh}body:before{content:"";position:fixed;inset:0;pointer-events:none;background:linear-gradient(125deg,transparent 25%,rgba(67,240,207,.025),transparent 60%,rgba(167,139,250,.035));z-index:-1}
+button,input,textarea{font:inherit}button{cursor:pointer}.layout{display:grid;grid-template-columns:245px minmax(0,1fr);min-height:100vh}.sidebar{position:sticky;top:0;height:100vh;padding:25px 17px 18px;border-right:1px solid var(--line);background:rgba(7,11,19,.82);backdrop-filter:blur(22px);display:flex;flex-direction:column;gap:30px}.brand{display:flex;align-items:center;gap:11px;padding:0 8px}.brand-icon{width:40px;height:40px;border-radius:13px;display:grid;place-items:center;font-size:21px;font-weight:800;color:#06131b;background:linear-gradient(135deg,var(--teal),#7b9cff);box-shadow:0 0 30px #43f0cf24}.brand strong{display:block;font-size:17px;letter-spacing:.3px}.brand small{font-size:10px;letter-spacing:1.4px;color:var(--muted)}.nav-label{font-size:10px;text-transform:uppercase;letter-spacing:1.6px;color:#66748e;padding:0 12px;margin:0 0 9px}.nav-item{width:100%;border:1px solid transparent;background:transparent;text-align:left;color:#9ba9c2;padding:11px 12px;border-radius:11px;display:flex;align-items:center;gap:12px;margin:3px 0;transition:.2s}.nav-item:hover{background:#ffffff08;color:white}.nav-item.active{color:#eafffb;background:linear-gradient(90deg,#43f0cf18,#a78bfa0c);border-color:#43f0cf28;box-shadow:inset 2px 0 var(--teal)}.nav-icon{width:20px;text-align:center;color:var(--teal);font-size:16px}.side-bottom{margin-top:auto}.status{padding:14px;border:1px solid var(--line);border-radius:14px;background:linear-gradient(140deg,#121e2b,#0c121d)}.status-line{display:flex;align-items:center;gap:8px;font-size:12px}.dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 12px #64e8b477}.status p{font-size:11px;color:var(--muted);margin:8px 0 0}.main{padding:30px clamp(18px,3vw,44px) 40px;max-width:1700px;width:100%;margin:auto;min-width:0}.topbar{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:28px}.eyebrow{font-size:10px;letter-spacing:1.8px;text-transform:uppercase;color:var(--teal);font-weight:700}.topbar h1{font-size:clamp(26px,3vw,38px);letter-spacing:-1.3px;line-height:1.15;margin:8px 0}.subtitle{color:var(--muted);font-size:13px;margin:8px 0 0}.top-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}.pill{border:1px solid var(--line);border-radius:99px;padding:8px 12px;color:#c5d2e8;font-size:11px;white-space:nowrap;background:#ffffff04}.pill .dot{display:inline-block;margin-right:6px}.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px}.card{position:relative;overflow:hidden;border:1px solid var(--line);border-radius:17px;background:linear-gradient(145deg,rgba(20,29,46,.92),rgba(10,15,25,.92));padding:19px;box-shadow:0 14px 38px #0003;min-width:0}.card:after{content:"";position:absolute;top:0;left:12%;right:12%;height:1px;background:linear-gradient(90deg,transparent,#73b7ff60,transparent)}.metric-label{display:flex;justify-content:space-between;align-items:center;gap:8px;color:var(--muted);font-size:12px}.metric-icon{display:grid;place-items:center;width:31px;height:31px;border:1px solid #43f0cf25;background:#43f0cf0d;border-radius:10px;color:var(--teal)}.metric-value{font-size:30px;font-weight:750;letter-spacing:-1px;margin:10px 0 3px}.metric-note{font-size:11px;color:#71809a}.section{margin-top:25px;scroll-margin-top:18px}.section-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:13px}.section-head h2{font-size:15px;margin:0;letter-spacing:.1px}.section-desc{color:var(--muted);font-size:11px;margin-top:4px}.studio{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:14px}.query-card{padding:23px}.query-title{display:flex;align-items:center;gap:12px;margin-bottom:8px}.spark{width:40px;height:40px;display:grid;place-items:center;border-radius:12px;background:linear-gradient(135deg,#43f0cf20,#a78bfa28);border:1px solid #43f0cf24;color:var(--teal);font-size:20px}.query-title h2{font-size:16px;margin:0}.query-title .section-desc{margin-top:3px}label{display:block;color:#bac8df;font-size:12px;margin:17px 0 7px}input,textarea{width:100%;background:#080e18;border:1px solid #2a3850;border-radius:10px;padding:12px 13px;color:var(--text);outline:none}input:focus,textarea:focus{border-color:#43f0cf;box-shadow:0 0 0 3px #43f0cf12}textarea{min-height:104px;resize:vertical}.hint{font-size:11px;color:var(--muted);margin-top:7px}.key-row{display:flex;gap:8px}.key-row input{min-width:0}.actions{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-top:15px}.primary{border:0;border-radius:10px;padding:11px 17px;color:#06131b;font-weight:750;background:linear-gradient(110deg,var(--teal),#8edcff);box-shadow:0 7px 22px #43f0cf1a}.primary:disabled{opacity:.5;cursor:wait}.secondary{border:1px solid var(--line);background:#151e2c;color:#d4e0f4;border-radius:10px;padding:10px 13px}.secondary:hover{border-color:#43f0cf65}.error{color:var(--red);font-size:12px;margin-top:12px;overflow-wrap:anywhere}.examples{display:flex;flex-wrap:wrap;gap:7px;margin-top:14px}.example{border:1px solid #28364b;background:#111a29;color:#c0cde2;border-radius:8px;padding:7px 9px;font-size:11px;text-align:left}.example:hover{border-color:#43f0cf}.tag{border:1px solid var(--line);background:#0b111b;color:#b9c9df;padding:6px 9px;border-radius:8px;font-size:11px;white-space:nowrap}.sql{background:#070c14;border:1px solid #202e42;border-radius:11px;padding:14px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;color:#a8d9ff;font:12px/1.75 Consolas,Monaco,monospace;min-height:74px}.reasoning{font-size:12px;color:#aebbd0;margin:12px 0 0;overflow-wrap:anywhere}.history{margin-top:14px}details summary{cursor:pointer;color:#bfcde3;font-size:12px}pre{white-space:pre-wrap;overflow:auto;max-height:260px;color:#aebbd0;font-size:11px}.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:13px;background:#0b111b}table{border-collapse:collapse;width:100%;font-size:12px;white-space:nowrap}th{background:#141d2b;color:#aebed6;font-weight:650;text-align:left}th,td{padding:12px 14px;border-bottom:1px solid #222d40}td{color:#dce6f7}tbody tr:hover{background:#ffffff05}tbody tr:last-child td{border-bottom:0}.empty{padding:25px;text-align:center;color:var(--muted);white-space:normal}.two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px}.mini-list{display:grid;gap:9px}.mini-row{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);font-size:12px}.mini-row:last-child{border-bottom:0}.muted{color:var(--muted)}.footer{margin-top:26px;color:#63718a;font-size:10px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}.hidden{display:none!important}.notice{border:1px solid #43f0cf28;background:#43f0cf09;padding:12px;border-radius:10px;color:#b7d7d7;font-size:12px;margin-top:12px}
+@media(max-width:1100px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.studio{grid-template-columns:1fr}}@media(max-width:720px){.layout{grid-template-columns:1fr}.sidebar{position:relative;height:auto;padding:15px;gap:15px;border-right:0;border-bottom:1px solid var(--line)}.sidebar nav{display:flex;flex-wrap:wrap;gap:5px}.nav-label{width:100%;margin-top:4px}.nav-item{width:auto;padding:9px}.nav-item span:last-child{display:none}.side-bottom{display:none}.main{padding:22px 14px}.topbar{flex-direction:column}.top-actions{justify-content:flex-start}.grid{gap:9px}.card{padding:14px}.metric-value{font-size:24px}.two-col{grid-template-columns:1fr}}
+</style>
 </head>
 <body>
-    <h1>NL-to-SQL Agent</h1>
-    <p>Ask a question about the employee database in plain English.</p>
-
-    <!-- Just an input + button, no <form> needed since we're using fetch() -->
-    <label for="api-key-input">API key</label><br>
-    <input type="password" id="api-key-input" autocomplete="off" placeholder="Paste your QueryMind API key" style="width:70%;padding:8px;margin:6px 0 12px;">
-    <br>
-    <label for="question-input">Question</label><br>
-    <input type="text" id="question-input" placeholder="e.g. Show me all employees in Engineering">
-    <button onclick="askQuestion()">Ask</button>
-    <p id="error-message" role="alert" style="color:#a00;"></p>
-
-    <div id="sql-box" style="display: none;"></div>
-    <details id="attempts-box" style="display: none;">
-        <summary>Agent attempt history</summary>
-        <pre id="attempts-content"></pre>
-    </details>
-    <table id="results-table"></table>
-
-    <script>
-        async function askQuestion() {
-            const question = document.getElementById("question-input").value.trim();
-            const apiKey = document.getElementById("api-key-input").value;
-            const errorBox = document.getElementById("error-message");
-            errorBox.textContent = "";
-            if (!question || !apiKey) {
-                errorBox.textContent = "Enter both a question and your API key.";
-                return;
-            }
-
-            let response;
-            let data;
-            try {
-                response = await fetch("/query", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "X-API-Key": apiKey
-                    },
-                    body: JSON.stringify({ question: question })
-                });
-                data = await response.json();
-            } catch (error) {
-                errorBox.textContent = "Could not reach QueryMind API.";
-                return;
-            }
-            if (!response.ok) {
-                errorBox.textContent = data.detail || "The request was rejected.";
-                return;
-            }
-
-            // Show the generated SQL
-            const sqlBox = document.getElementById("sql-box");
-            sqlBox.style.display = "block";
-            const latestAttempt = data.attempts && data.attempts.length > 0
-    ? data.attempts[data.attempts.length - 1]
-    : {};
-
-const confidence = data.confidence ?? latestAttempt.confidence ?? 0;
-const reasoning = data.reasoning ?? latestAttempt.reasoning ?? "No reasoning available.";
-
-sqlBox.textContent =
-    "Generated SQL: " + data.final_sql +
-    " (Confidence: " + confidence + "/10 — " +
-    reasoning + ")";
-
-            // Show the retry history (collapsible, so it doesn't clutter the UI)
-            const attemptsBox = document.getElementById("attempts-box");
-            const attemptsContent = document.getElementById("attempts-content");
-            attemptsBox.style.display = "block";
-            attemptsContent.textContent = JSON.stringify(data.attempts, null, 2);
-
-            // Build the results table dynamically from whatever columns came back
-            const table = document.getElementById("results-table");
-            table.innerHTML = "";
-
-            if (data.results && data.results.length > 0) {
-                const headers = Object.keys(data.results[0]);
-                const headerRow = document.createElement("tr");
-                headers.forEach(h => {
-                    const th = document.createElement("th");
-                    th.textContent = h;
-                    headerRow.appendChild(th); 
-                });
-                table.appendChild(headerRow);
-
-                data.results.forEach(row => {
-                    const tr = document.createElement("tr");
-                    headers.forEach(h => {
-                        const td = document.createElement("td");
-                        td.textContent = row[h];
-                        tr.appendChild(td);
-                    });
-                    table.appendChild(tr);
-                });
-            } else {
-                table.innerHTML = "<tr><td>No results (or query failed)</td></tr>";
-            }
-        }
-    </script>
+<div class="layout">
+<aside class="sidebar">
+  <div class="brand"><div class="brand-icon">Q</div><div><strong>QueryMind</strong><small>GOVERNED ANALYTICS</small></div></div>
+  <nav aria-label="Main navigation">
+    <div class="nav-label">Workspace</div>
+    <button class="nav-item active" data-target="overview"><span class="nav-icon">◈</span><span>Analytics overview</span></button>
+    <button class="nav-item" data-target="studio-section"><span class="nav-icon">✳</span><span>AI query studio</span></button>
+    <button class="nav-item" data-target="results-section"><span class="nav-icon">▤</span><span>Query results</span></button>
+    <button class="nav-item" data-target="activity-section"><span class="nav-icon">⌘</span><span>Agent activity</span></button>
+    <div class="nav-label" style="margin-top:15px">Governance</div>
+    <button class="nav-item" data-target="access-section"><span class="nav-icon">⬡</span><span>Access controls</span></button>
+    <button class="nav-item" data-target="audit-section"><span class="nav-icon">◷</span><span>Audit trail</span></button>
+  </nav>
+  <div class="side-bottom"><div class="status"><div class="status-line"><span class="dot" id="health-dot"></span><strong id="health-label">Checking API</strong></div><p id="health-detail">Connecting to the local QueryMind service…</p></div></div>
+</aside>
+<main class="main">
+<header class="topbar" id="overview"><div><div class="eyebrow">AI analytics platform / secure workspace</div><h1>Intelligence, on demand.</h1><p class="subtitle">Ask business questions in plain English. QueryMind translates them into governed SQL.</p></div><div class="top-actions"><span class="pill"><span class="dot"></span> Governance enabled</span><span class="pill">LOCAL INSTANCE · v1.1.0</span></div></header>
+<section class="grid" aria-label="Workspace metrics">
+<div class="card"><div class="metric-label">Queries this session <span class="metric-icon">⌁</span></div><div class="metric-value" id="m-queries">0</div><div class="metric-note">Requests sent from this page</div></div>
+<div class="card"><div class="metric-label">Successful requests <span class="metric-icon">✓</span></div><div class="metric-value" id="m-success">0</div><div class="metric-note">Successful responses this session</div></div>
+<div class="card"><div class="metric-label">Rows returned <span class="metric-icon">▦</span></div><div class="metric-value" id="m-rows">0</div><div class="metric-note">Across successful query results</div></div>
+<div class="card"><div class="metric-label">Latest confidence <span class="metric-icon">✧</span></div><div class="metric-value" id="m-confidence">—</div><div class="metric-note">Reported by the query agent</div></div>
+</section>
+<section class="section" id="studio-section">
+<div class="section-head"><div><h2>AI query studio</h2><div class="section-desc">Natural language in. Governed database results out.</div></div><span class="pill">SELECT-only safeguards</span></div>
+<div class="studio">
+<div class="card query-card">
+<div class="query-title"><div class="spark">✳</div><div><h2>Ask your data</h2><div class="section-desc">Write a question about your connected database.</div></div></div>
+<label for="api-key-input">API key</label><div class="key-row"><input type="password" id="api-key-input" autocomplete="off" placeholder="Enter your QueryMind API key"><button class="secondary" id="toggle-key" type="button">Show</button></div>
+<div class="hint">Your key is kept in this page and sent in the X-API-Key request header.</div>
+<label for="question-input">What would you like to know?</label><textarea id="question-input" maxlength="1000" placeholder="e.g. Show the number of employees in each department"></textarea>
+<div class="hint"><span id="char-count">0</span>/1000 characters · Press Ctrl+Enter to run</div>
+<div class="actions"><button class="primary" id="ask-button" type="button">✦ Run analysis</button><button class="secondary" id="clear-button" type="button">Clear</button><span class="hint" id="run-status" aria-live="polite"></span></div><div id="error-message" class="error" role="alert"></div>
+<div class="examples"><button class="example" type="button">Show all departments</button><button class="example" type="button">Count employees by department</button><button class="example" type="button">List employees in Engineering</button></div>
+</div>
+<div class="card"><div class="section-head"><div><h2>Generated SQL</h2><div class="section-desc">Review the query produced by the agent.</div></div><span class="tag" id="confidence-tag">Awaiting query</span></div><div id="sql-box" class="sql">Your generated SQL will appear here after you run a query.</div><div class="reasoning" id="reasoning-box">The agent's reasoning summary will appear here.</div><div class="history"><details id="attempts-box"><summary>View agent attempt history</summary><pre id="attempts-content">No attempts yet.</pre></details></div></div>
+</div>
+</section>
+<section class="section" id="results-section"><div class="section-head"><div><h2>Query results</h2><div class="section-desc" id="results-subtitle">Your returned records will appear here.</div></div><button class="secondary" id="download-button" type="button" disabled>Export CSV</button></div><div class="table-wrap"><table id="results-table"><tbody><tr><td class="empty">Run a query to populate this table with live results.</td></tr></tbody></table></div></section>
+<section class="section" id="activity-section"><div class="section-head"><div><h2>Agent activity</h2><div class="section-desc">Live activity from this browser session.</div></div><button class="secondary" id="clear-activity" type="button">Clear activity</button></div><div class="card"><div id="activity-list" class="mini-list"><div class="muted">No activity yet. Run a query to see events here.</div></div></div></section>
+<div class="two-col">
+<section class="section" id="access-section"><div class="section-head"><div><h2>Access controls</h2><div class="section-desc">Role-based access is determined by the server API key.</div></div></div><div class="card"><div class="mini-list"><div class="mini-row"><span>Authentication</span><strong>API key</strong></div><div class="mini-row"><span>Role assignment</span><strong>Server-side</strong></div><div class="mini-row"><span>Query protection</span><strong>Read-only safeguards</strong></div><div class="mini-row"><span>Rate limiting</span><strong>Configured on server</strong></div></div><div class="notice">The browser does not grant roles. Use the key issued for your intended role; never paste secrets into screenshots or share them.</div></div></section>
+<section class="section" id="audit-section"><div class="section-head"><div><h2>Audit trail</h2><div class="section-desc">Load server audit events with an administrator API key.</div></div><button class="secondary" id="load-audit" type="button">Load audit</button></div><div class="card"><div id="audit-status" class="muted">Audit events are not loaded.</div><div id="audit-list" class="mini-list" style="margin-top:10px"></div></div></section>
+</div>
+<div class="footer"><span>QueryMind · Governed Analytics Agent</span><span>Results depend on your role and database permissions.</span></div>
+</main></div>
+<script>
+const $=id=>document.getElementById(id);
+let sessionQueries=0,sessionSuccess=0,sessionRows=0,lastRows=[],requestInFlight=false;
+const activity=[];
+function addActivity(title,detail,kind="info"){activity.unshift({time:new Date().toLocaleTimeString(),title,detail,kind});renderActivity();}
+function renderActivity(){const root=$("activity-list");root.replaceChildren();if(!activity.length){root.textContent="No activity yet. Run a query to see events here.";root.className="mini-list muted";return;}root.className="mini-list";activity.slice(0,12).forEach(item=>{const row=document.createElement("div");row.className="mini-row";const left=document.createElement("div");const strong=document.createElement("strong");strong.textContent=item.title;const sub=document.createElement("div");sub.className="muted";sub.textContent=item.detail;left.append(strong,sub);const time=document.createElement("span");time.className="muted";time.textContent=item.time;row.append(left,time);root.append(row);});}
+async function checkHealth(){try{const r=await fetch("/");if(!r.ok)throw Error("HTTP "+r.status);const d=await r.json();$("health-label").textContent="API connected";$("health-detail").textContent=(d.message||"QueryMind is responding")+" · "+(d.version||"");$("health-dot").style.background="var(--green)";addActivity("API connection established","Local QueryMind service responded.");}catch(e){$("health-label").textContent="API unavailable";$("health-detail").textContent="Start or check the FastAPI server.";$("health-dot").style.background="var(--red)";$("health-label").style.color="var(--red)";addActivity("API unavailable","The local server did not respond.","error");}}
+function setError(message){$("error-message").textContent=message||""}
+function safeValue(value){return value===null||value===undefined?"—":typeof value==="object"?JSON.stringify(value):String(value)}
+function renderTable(rows){const table=$("results-table");table.replaceChildren();if(!Array.isArray(rows)||rows.length===0){const body=document.createElement("tbody"),tr=document.createElement("tr"),td=document.createElement("td");td.className="empty";td.textContent="No rows returned for this query.";tr.append(td);body.append(tr);table.append(body);$("results-subtitle").textContent="0 rows returned";lastRows=[];$("download-button").disabled=true;return;}lastRows=rows;const headers=[...new Set(rows.flatMap(row=>row&&typeof row==="object"?Object.keys(row):[]))];const thead=document.createElement("thead"),hr=document.createElement("tr");headers.forEach(h=>{const th=document.createElement("th");th.textContent=h;hr.append(th)});thead.append(hr);table.append(thead);const tbody=document.createElement("tbody");rows.forEach(row=>{const tr=document.createElement("tr");headers.forEach(h=>{const td=document.createElement("td");td.textContent=safeValue(row?.[h]);tr.append(td)});tbody.append(tr)});table.append(tbody);$("results-subtitle").textContent=rows.length+" row"+(rows.length===1?"":"s")+" returned";$("download-button").disabled=false;}
+function displayResponse(data){const attempts=Array.isArray(data.attempts)?data.attempts:[];const latest=attempts.length?attempts[attempts.length-1]:{};const confidence=data.confidence??latest.confidence;$("sql-box").textContent=data.final_sql||data.sql||"No SQL was returned by the agent.";$("reasoning-box").textContent=data.reasoning??latest.reasoning??data.error??"No reasoning summary was provided.";$("confidence-tag").textContent=confidence===undefined||confidence===null?"Confidence unavailable":"Confidence: "+confidence+"/10";$("m-confidence").textContent=confidence===undefined||confidence===null?"—":confidence+"/10";$("attempts-content").textContent=JSON.stringify(attempts,null,2);$("attempts-box").open=false;renderTable(Array.isArray(data.results)?data.results:[]);}
+async function askQuestion(){if(requestInFlight)return;const question=$("question-input").value.trim(),apiKey=$("api-key-input").value;setError("");if(!question||!apiKey){setError("Enter both a question and your API key.");return;}requestInFlight=true;$("ask-button").disabled=true;$("ask-button").textContent="Running analysis…";$("run-status").textContent="Contacting QueryMind…";sessionQueries++;$("m-queries").textContent=sessionQueries;addActivity("Query submitted",question.length>65?question.slice(0,65)+"…":question);try{const response=await fetch("/query",{method:"POST",headers:{"Content-Type":"application/json","X-API-Key":apiKey},body:JSON.stringify({question})});let data;try{data=await response.json()}catch{throw Error("The server returned an unreadable response.")}if(!response.ok){const message=typeof data.detail==="string"?data.detail:"The request was rejected (HTTP "+response.status+").";setError(message);$("run-status").textContent="Request rejected";addActivity("Query rejected",message,"error");return;}displayResponse(data);const success=Boolean(data.final_sql||data.sql)&&!data.error;if(success)sessionSuccess++;sessionRows+=Array.isArray(data.results)?data.results.length:0;$("m-success").textContent=sessionSuccess;$("m-rows").textContent=sessionRows;$("run-status").textContent=success?"Analysis complete":"Response received; inspect the result and error details.";addActivity(success?"Analysis completed":"Response received",((data.results||[]).length)+" rows returned",success?"success":"info");}catch(error){const message=error.message==="Failed to fetch"?"Could not reach QueryMind API. Check that the server is running.":error.message;setError(message);$("run-status").textContent="Request failed";addActivity("Request failed",message,"error");}finally{requestInFlight=false;$("ask-button").disabled=false;$("ask-button").textContent="✦ Run analysis";}}
+$("ask-button").addEventListener("click",askQuestion);$("question-input").addEventListener("input",()=>$("char-count").textContent=$("question-input").value.length);$("question-input").addEventListener("keydown",e=>{if((e.ctrlKey||e.metaKey)&&e.key==="Enter")askQuestion()});$("toggle-key").addEventListener("click",()=>{const field=$("api-key-input"),reveal=field.type==="password";field.type=reveal?"text":"password";$("toggle-key").textContent=reveal?"Hide":"Show"});$("clear-button").addEventListener("click",()=>{$("question-input").value="";$("char-count").textContent="0";setError("");$("run-status").textContent="";$("question-input").focus()});document.querySelectorAll(".example").forEach(button=>button.addEventListener("click",()=>{$("question-input").value=button.textContent;$("char-count").textContent=button.textContent.length;$("question-input").focus()}));
+$("download-button").addEventListener("click",()=>{if(!lastRows.length)return;const headers=[...new Set(lastRows.flatMap(row=>row&&typeof row==="object"?Object.keys(row):[]))];const quote=value=>'"'+String(value??"").replace(/"/g,'""')+'"';const csv=[headers.map(quote).join(","),...lastRows.map(row=>headers.map(h=>quote(row?.[h])).join(","))].join("\r\n");const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="querymind-results.csv";a.click();URL.revokeObjectURL(url);addActivity("CSV exported",lastRows.length+" rows exported.");});
+document.querySelectorAll(".nav-item").forEach(button=>button.addEventListener("click",()=>{document.querySelectorAll(".nav-item").forEach(b=>b.classList.remove("active"));button.classList.add("active");$(button.dataset.target)?.scrollIntoView({behavior:"smooth",block:"start"});}));
+$("clear-activity").addEventListener("click",()=>{activity.length=0;renderActivity();});
+$("load-audit").addEventListener("click",async()=>{const key=$("api-key-input").value;if(!key){$("audit-status").textContent="Enter an administrator API key in the query studio first.";return;}const root=$("audit-list");root.replaceChildren();$("audit-status").textContent="Loading audit events…";try{const response=await fetch("/api/audit?limit=50",{headers:{"X-API-Key":key}});const data=await response.json();if(!response.ok)throw Error(typeof data.detail==="string"?data.detail:"Audit request failed (HTTP "+response.status+").");$("audit-status").textContent=(data.count??(data.events||[]).length)+" audit event(s) returned.";const events=Array.isArray(data.events)?data.events:[];if(!events.length){root.textContent="No audit events found.";return;}events.forEach(event=>{const row=document.createElement("div");row.className="mini-row";const left=document.createElement("div"),strong=document.createElement("strong"),sub=document.createElement("div");strong.textContent=(event.event_type||"Query audit")+" · "+(event.role||"unknown role");sub.className="muted";sub.textContent=[event.timestamp,event.success===false?"Failed":"",event.row_count!==undefined?event.row_count+" rows":""].filter(Boolean).join(" · ");left.append(strong,sub);const right=document.createElement("span");right.className="muted";right.textContent=event.success===false?"FAILED":"LOGGED";row.append(left,right);root.append(row);});}catch(error){$("audit-status").textContent="Could not load audit: "+error.message;}});
+checkHealth();
+</script>
 </body>
 </html>
+'''
+path = Path("/mnt/data/querymind_dashboard_redesigned.html")
+path.write_text(html, encoding="utf-8")
+print(f"Created redesigned dashboard: {path} ({len(html):,} characters)")

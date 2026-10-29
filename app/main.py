@@ -1,12 +1,35 @@
-import os
 
-from fastapi import FastAPI, Header, HTTPException, Request
+import json
+import os
+from pathlib import Path
+
+from dotenv import load_dotenv
+from fastapi import FastAPI, Header, HTTPException, Query, Request
 from fastapi.responses import FileResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
+
+
+# ---------------------------------------------------------
+# Environment and application imports
+# ---------------------------------------------------------
+
+BASE_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = BASE_DIR.parent
+
+# Load environment variables before importing modules that use API keys.
+load_dotenv(PROJECT_ROOT / ".env", override=False)
 
 from app.app.llm_service import generate_and_run
-from app.app.governance import mask_results, log_audit_entry
-from app.app.security import role_for_api_key, enforce_rate_limit
+from app.app.governance import (
+    mask_results,
+    log_audit_entry,
+    AUDIT_LOG_PATH,
+)
+from app.app.request_router import classify_request
+from app.app.security import (
+    role_for_api_key,
+    enforce_rate_limit,
+)
 
 
 # ---------------------------------------------------------
@@ -16,27 +39,14 @@ from app.app.security import role_for_api_key, enforce_rate_limit
 app = FastAPI(
     title="QueryMind - Governed Analytics Agent",
     description=(
-        "Natural-language-to-SQL analytics API with "
-        "role-based access control, masking, row limits, "
-        "audit logging, and self-correcting SQL generation."
+        "Natural-language-to-SQL analytics API with API-key "
+        "authentication, request routing, role-based access control, "
+        "masking, row limits, audit logging, and self-correcting SQL."
     ),
-    version="1.1.0",
+    version="1.2.0",
 )
 
-
-# ---------------------------------------------------------
-# Paths
-# ---------------------------------------------------------
-
-BASE_DIR = os.path.dirname(
-    os.path.abspath(__file__)
-)
-
-FRONTEND_PATH = os.path.join(
-    BASE_DIR,
-    "app",
-    "index.html",
-)
+FRONTEND_PATH = BASE_DIR / "app" / "index.html"
 
 
 # ---------------------------------------------------------
@@ -44,116 +54,125 @@ FRONTEND_PATH = os.path.join(
 # ---------------------------------------------------------
 
 class QuestionRequest(BaseModel):
+    model_config = ConfigDict(
+        str_strip_whitespace=True,
+        extra="ignore",
+    )
+
     question: str
-
-    class Config:
-        str_strip_whitespace = True
-        extra = "ignore"
-
 
 
 # ---------------------------------------------------------
-# Health endpoint
+# Health and frontend endpoints
 # ---------------------------------------------------------
 
 @app.get("/")
 def read_root():
     return {
         "message": "QueryMind NL-to-SQL Agent is alive!",
-        "version": "1.1.0",
+        "version": "1.2.0",
     }
 
 
-# ---------------------------------------------------------
-# Frontend
-# ---------------------------------------------------------
-
 @app.get("/ui")
 def serve_frontend():
-    return FileResponse(
-        FRONTEND_PATH
-    )
+    if not FRONTEND_PATH.is_file():
+        raise HTTPException(
+            status_code=404,
+            detail="QueryMind frontend file was not found.",
+        )
+
+    return FileResponse(str(FRONTEND_PATH))
 
 
 # ---------------------------------------------------------
-# NL-to-SQL endpoint
+# Query endpoint
 # ---------------------------------------------------------
 
 @app.post("/query")
 def query(
     request: QuestionRequest,
     http_request: Request,
-    x_api_key: str | None = Header(default=None, alias="X-API-Key"),
+    x_api_key: str | None = Header(
+        default=None,
+        alias="X-API-Key",
+    ),
 ):
-    """
-    Convert a natural-language question into SQL and
-    execute it through the governance pipeline.
+    """Authenticate, classify, execute, mask, and audit a query."""
 
-    Governance includes:
-
-    - SELECT-only enforcement
-    - automatic row limits
-    - SQLite authorizer-based RBAC
-    - sensitive-column masking
-    - audit logging
-    """
-
-    # Identity and role come from a server-side API key mapping.
-    # Never trust a role supplied by the caller.
+    # 1. Apply rate limiting.
     enforce_rate_limit(http_request)
+
+    # 2. Derive the role from server-configured API keys.
     role = role_for_api_key(x_api_key)
 
     question = request.question.strip()
+
+    # 3. Validate the question before calling the LLM.
     if not question:
-        raise HTTPException(status_code=422, detail="Question must not be empty.")
+        raise HTTPException(
+            status_code=422,
+            detail="Question must not be empty.",
+        )
+
     if len(question) > 1000:
-        raise HTTPException(status_code=413, detail="Question is too long (maximum 1000 characters).")
+        raise HTTPException(
+            status_code=413,
+            detail="Question is too long (maximum 1000 characters).",
+        )
 
-    # -----------------------------------------------------
-    # Generate and execute SQL
-    #
-    # IMPORTANT:
-    # The role is passed into generate_and_run().
-    #
-    # generate_and_run()
-    #       ↓
-    # execute_query()
-    #       ↓
-    # apply_authorizer()
-    #       ↓
-    # SQLite
-    # -----------------------------------------------------
+    # 4. Classify the request before generating SQL.
+    classification = classify_request(question)
 
+    if not classification.get("allowed", False):
+        error_message = classification.get(
+            "reason",
+            "This request is not supported.",
+        )
+        category = classification.get("category", "unsupported")
+
+        log_audit_entry(
+            role=role,
+            question=question,
+            sql=None,
+            row_count=0,
+            success=False,
+            error=error_message,
+        )
+
+        status_code = 422 if category == "invalid" else 400
+
+        raise HTTPException(
+            status_code=status_code,
+            detail={
+                "category": category,
+                "message": error_message,
+            },
+        )
+
+    # 5. Generate and execute SQL through the existing pipeline.
     result = generate_and_run(
         question,
         role=role,
     )
 
-    # -----------------------------------------------------
-    # Defense-in-depth result masking
-    # -----------------------------------------------------
-
+    # 6. Apply defense-in-depth result masking.
     if result.get("results") is not None:
         result["results"] = mask_results(
             result["results"],
             role,
         )
 
-    # -----------------------------------------------------
-    # Audit logging
-    # -----------------------------------------------------
-
+    # 7. Audit the query outcome.
     results = result.get("results")
-
     row_count = (
         len(results)
         if results is not None
-        else 0
+        else result.get("row_count", 0)
     )
 
     success = (
-        result.get("final_sql")
-        is not None
+        result.get("final_sql") is not None
         and result.get("error") is None
     )
 
@@ -166,8 +185,55 @@ def query(
         error=result.get("error"),
     )
 
-    # -----------------------------------------------------
-    # API response
-    # -----------------------------------------------------
-
     return result
+
+
+# ---------------------------------------------------------
+# Administrator-only audit endpoint
+# ---------------------------------------------------------
+
+@app.get("/api/audit")
+def read_audit(
+    limit: int = Query(default=50, ge=1, le=200),
+    x_api_key: str | None = Header(
+        default=None,
+        alias="X-API-Key",
+    ),
+):
+    """Return recent audit events to authenticated administrators."""
+
+    role = role_for_api_key(x_api_key)
+
+    if role != "admin":
+        raise HTTPException(
+            status_code=403,
+            detail="Administrator access is required to view audit events.",
+        )
+
+    audit_path = Path(AUDIT_LOG_PATH)
+
+    if not audit_path.is_file():
+        return {
+            "events": [],
+            "count": 0,
+        }
+
+    events = []
+
+    with audit_path.open("r", encoding="utf-8") as file:
+        for line in file:
+            try:
+                event = json.loads(line)
+
+                if isinstance(event, dict):
+                    events.append(event)
+
+            except (json.JSONDecodeError, TypeError):
+                continue
+
+    recent = list(reversed(events[-limit:]))
+
+    return {
+        "events": recent,
+        "count": len(recent),
+    }
