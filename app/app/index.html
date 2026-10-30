@@ -28,6 +28,30 @@ button,input,textarea{font:inherit}button{cursor:pointer}.layout{display:grid;gr
 
 
 .page-hidden{display:none!important}.page-enter{animation:pageReveal .48s cubic-bezier(.2,.75,.25,1) both;transform-origin:top center}@keyframes pageReveal{from{opacity:0;transform:translateY(18px);clip-path:inset(0 0 88% 0)}to{opacity:1;transform:translateY(0);clip-path:inset(0 0 0 0)}}@media(prefers-reduced-motion:reduce){.page-enter{animation:none}}.page-title{margin-bottom:18px}.page-title h1{font-size:clamp(26px,3vw,36px);margin:0}.page-title p{color:var(--muted);font-size:12px;margin:6px 0 0}.nav-item.active{background:linear-gradient(90deg,#174b79,#192b57);border-color:#3476bd;box-shadow:inset 2px 0 #42d9ed}.nav-icon{color:#83c9ff}.metric-icon{color:#72c8ff;border-color:#3476bd35;background:#3476bd16}.primary{background:linear-gradient(110deg,#2563eb,#5b55e7);color:white}.connection-panel{border-color:#244c80}
+
+/* QueryMind animated accent cycle: teal → blue → violet → rose */
+:root{--cycle-teal:#45e6c4;--cycle-blue:#55b8ff;--cycle-violet:#a78bfa;--cycle-rose:#f18acb}
+@keyframes qmHueCycle{
+  0%,100%{--cycle-current:var(--cycle-teal);--cycle-glow:rgba(69,230,196,.16)}
+  33%{--cycle-current:var(--cycle-blue);--cycle-glow:rgba(85,184,255,.18)}
+  66%{--cycle-current:var(--cycle-violet);--cycle-glow:rgba(167,139,250,.18)}
+  85%{--cycle-current:var(--cycle-rose);--cycle-glow:rgba(241,138,203,.16)}
+}
+:root{animation:qmHueCycle 18s ease-in-out infinite}
+body{background:radial-gradient(ellipse at 72% -8%,#25466b 0,transparent 42%),radial-gradient(ellipse at 0 48%,#16464a 0,transparent 34%),#0b1220}
+.sidebar{background:rgba(10,18,31,.9)}
+.card{background:linear-gradient(145deg,rgba(27,42,64,.96),rgba(15,25,42,.96));border-color:color-mix(in srgb,var(--cycle-current) 25%,#35445d)}
+.brand-icon{background:linear-gradient(135deg,var(--cycle-current),#8cbcff);box-shadow:0 0 30px var(--cycle-glow)}
+.nav-item.active{border-color:color-mix(in srgb,var(--cycle-current) 50%,transparent);box-shadow:inset 3px 0 var(--cycle-current),0 0 22px var(--cycle-glow);background:linear-gradient(90deg,var(--cycle-glow),rgba(167,139,250,.06))}
+.nav-icon,.eyebrow,.spark,.metric-icon{color:var(--cycle-current)}
+.metric-icon,.spark{border-color:color-mix(in srgb,var(--cycle-current) 34%,transparent);background:var(--cycle-glow)}
+.primary{background:linear-gradient(110deg,var(--cycle-current),#7baaff);color:#071321;box-shadow:0 7px 24px var(--cycle-glow)}
+input:focus,textarea:focus{border-color:var(--cycle-current);box-shadow:0 0 0 3px var(--cycle-glow)}
+.example:hover,.secondary:hover{border-color:var(--cycle-current)}
+.connection-panel{border-color:color-mix(in srgb,var(--cycle-current) 38%,#244c80)}
+.status .dot,.pill .dot{background:var(--cycle-current);box-shadow:0 0 12px var(--cycle-glow)}
+@media(prefers-reduced-motion:reduce){:root{animation:none}}
+
 </style>
 </head>
 <body>
