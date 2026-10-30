@@ -2,6 +2,7 @@ import json
 import os
 import re
 import sqlite3
+import threading
 from datetime import datetime, timezone
 
 
@@ -13,6 +14,7 @@ AUDIT_LOG_PATH = os.path.abspath(
 )
 
 MAX_ROWS = 100
+_AUDIT_WRITE_LOCK = threading.Lock()
 
 VALID_ROLES = {
     "viewer",
@@ -163,11 +165,13 @@ def log_audit_entry(
         "error": error,
     }
 
-    with open(
-        AUDIT_LOG_PATH,
-        "a",
-        encoding="utf-8",
-    ) as file:
-        file.write(
-            json.dumps(entry) + "\n"
-        )
+    audit_path = os.path.abspath(AUDIT_LOG_PATH)
+    os.makedirs(os.path.dirname(audit_path), exist_ok=True)
+    serialized = json.dumps(entry, ensure_ascii=False, separators=(",", ":"))
+
+    # Serialize writes within this process so concurrent API requests do not
+    # interleave JSONL records. A single append write keeps each event intact.
+    with _AUDIT_WRITE_LOCK:
+        with open(audit_path, "a", encoding="utf-8") as file:
+            file.write(serialized + "\n")
+            file.flush()
