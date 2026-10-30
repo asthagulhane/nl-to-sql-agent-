@@ -119,3 +119,47 @@ def test_query_results_are_bounded(tmp_path):
 
     assert result["success"] is True
     assert result["row_count"] <= 100
+
+
+def test_existing_large_limit_cannot_bypass_result_cap(tmp_path):
+    db_path = create_test_database(tmp_path)
+    connection = sqlite3.connect(db_path)
+    connection.executemany(
+        "INSERT INTO employees (name, salary) VALUES (?, ?)",
+        [(f"Employee {i}", 50000 + i) for i in range(150)],
+    )
+    connection.commit()
+    connection.close()
+
+    result = execute_query(
+        "SELECT id, name FROM employees LIMIT 100000",
+        db_path=db_path,
+        role="viewer",
+    )
+
+    assert result["success"] is True
+    assert result["row_count"] == 100
+    assert len(result["results"]) == 100
+    assert result["truncated"] is True
+
+
+def test_ordered_query_is_bounded_without_losing_order(tmp_path):
+    db_path = create_test_database(tmp_path)
+    connection = sqlite3.connect(db_path)
+    connection.executemany(
+        "INSERT INTO employees (name, salary) VALUES (?, ?)",
+        [(f"Employee {i:03d}", 50000 + i) for i in range(150)],
+    )
+    connection.commit()
+    connection.close()
+
+    result = execute_query(
+        "SELECT id, name FROM employees ORDER BY name DESC LIMIT 100000;",
+        db_path=db_path,
+        role="viewer",
+    )
+
+    assert result["success"] is True
+    assert result["row_count"] == 100
+    assert result["truncated"] is True
+    assert result["results"][0]["name"] == "Employee 149"
