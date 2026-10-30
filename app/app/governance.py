@@ -126,18 +126,25 @@ def enforce_row_limit(
     sql: str,
     max_rows: int = MAX_ROWS,
 ) -> str:
-    """Append a LIMIT clause when one is not already present."""
+    """Wrap a validated read query so its output cannot exceed max_rows."""
 
-    if re.search(
-        r"\blimit\b",
-        sql,
-        re.IGNORECASE,
-    ):
-        return sql
+    if not isinstance(max_rows, int) or isinstance(max_rows, bool) or max_rows < 1:
+        raise ValueError("max_rows must be a positive integer.")
 
+    statement = sql.strip()
+    if statement.endswith(";"):
+        statement = statement[:-1].rstrip()
+
+    if not statement:
+        raise ValueError("SQL query cannot be empty.")
+
+    # An outer LIMIT caps the final result even when the inner query already
+    # contains a larger LIMIT, ORDER BY, or a read-only CTE.
     return (
-        sql.rstrip(";").strip()
-        + f" LIMIT {max_rows};"
+        "SELECT * FROM (\n"
+        + statement
+        + "\n) AS querymind_bounded_result "
+        + f"LIMIT {max_rows}"
     )
 
 
