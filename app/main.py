@@ -29,6 +29,8 @@ from app.app.request_router import classify_request
 from app.app.security import (
     role_for_api_key,
     enforce_rate_limit,
+    rate_limiter,
+    security_events,
 )
 
 
@@ -83,6 +85,53 @@ def serve_frontend():
         )
 
     return FileResponse(str(FRONTEND_PATH))
+
+
+# ---------------------------------------------------------
+# Authenticated governance endpoints
+# ---------------------------------------------------------
+
+@app.get("/api/access-controls")
+def access_controls(
+    x_api_key: str | None = Header(default=None, alias="X-API-Key"),
+):
+    """Return the authenticated role and effective server-side controls."""
+    role = role_for_api_key(x_api_key)
+    permissions = {
+        "viewer": ["Run permitted read-only queries", "View masked results"],
+        "analyst": ["Run permitted read-only queries", "View analytics results"],
+        "admin": ["Run permitted read-only queries", "View audit and security events", "Inspect access controls"],
+    }
+    return {
+        "authenticated": True,
+        "current_role": role,
+        "role": role,
+        "authentication": "API key",
+        "role_assignment": "Server-side",
+        "database_access": "Read-only SQLite connection",
+        "query_only": True,
+        "maximum_rows": 100,
+        "rate_limit_per_minute": rate_limiter.limit,
+        "rate_limit_window_seconds": rate_limiter.window_seconds,
+        "permissions": permissions.get(role, permissions["viewer"]),
+        "available_roles": ["admin", "analyst", "viewer"],
+    }
+
+
+@app.get("/api/security-events")
+def read_security_events(
+    limit: int = Query(default=50, ge=1, le=200),
+    x_api_key: str | None = Header(default=None, alias="X-API-Key"),
+):
+    """Return recent in-memory security events to administrators."""
+    role = role_for_api_key(x_api_key)
+    if role != "admin":
+        raise HTTPException(
+            status_code=403,
+            detail="Administrator access is required to view security events.",
+        )
+    events = security_events.recent(limit)
+    return {"events": events, "count": len(events)}
 
 
 # ---------------------------------------------------------
