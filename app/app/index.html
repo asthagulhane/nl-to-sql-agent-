@@ -27,7 +27,7 @@ button,input,textarea{font:inherit}button{cursor:pointer}.layout{display:grid;gr
 @media(max-width:520px){.connection-metrics{grid-template-columns:1fr}}
 
 
-.page-hidden{display:none!important}.page-title{margin-bottom:18px}.page-title h1{font-size:clamp(26px,3vw,36px);margin:0}.page-title p{color:var(--muted);font-size:12px;margin:6px 0 0}.nav-item.active{background:linear-gradient(90deg,#174b79,#192b57);border-color:#3476bd;box-shadow:inset 2px 0 #42d9ed}.nav-icon{color:#83c9ff}.metric-icon{color:#72c8ff;border-color:#3476bd35;background:#3476bd16}.primary{background:linear-gradient(110deg,#2563eb,#5b55e7);color:white}.connection-panel{border-color:#244c80}
+.page-hidden{display:none!important}.page-enter{animation:pageReveal .48s cubic-bezier(.2,.75,.25,1) both;transform-origin:top center}@keyframes pageReveal{from{opacity:0;transform:translateY(18px);clip-path:inset(0 0 88% 0)}to{opacity:1;transform:translateY(0);clip-path:inset(0 0 0 0)}}@media(prefers-reduced-motion:reduce){.page-enter{animation:none}}.page-title{margin-bottom:18px}.page-title h1{font-size:clamp(26px,3vw,36px);margin:0}.page-title p{color:var(--muted);font-size:12px;margin:6px 0 0}.nav-item.active{background:linear-gradient(90deg,#174b79,#192b57);border-color:#3476bd;box-shadow:inset 2px 0 #42d9ed}.nav-icon{color:#83c9ff}.metric-icon{color:#72c8ff;border-color:#3476bd35;background:#3476bd16}.primary{background:linear-gradient(110deg,#2563eb,#5b55e7);color:white}.connection-panel{border-color:#244c80}
 </style>
 </head>
 <body>
@@ -137,7 +137,25 @@ $("ask-button").addEventListener("click",askQuestion);$("question-input").addEve
 $("download-button").addEventListener("click",()=>{if(!lastRows.length)return;const headers=[...new Set(lastRows.flatMap(row=>row&&typeof row==="object"?Object.keys(row):[]))];const quote=value=>'"'+String(value??"").replace(/"/g,'""')+'"';const csv=[headers.map(quote).join(","),...lastRows.map(row=>headers.map(h=>quote(row?.[h])).join(","))].join("\r\n");const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="querymind-results.csv";a.click();URL.revokeObjectURL(url);addActivity("CSV exported",lastRows.length+" rows exported.");});
 const pageTargets={overview:["overview","workspace-metrics","connection-section"],"studio-section":["studio-section"],"results-section":["results-section"],"activity-section":["activity-section"],"access-section":["access-section"],"audit-section":["audit-section"],"security-section":["security-section"]};
 const pageElements=["overview","workspace-metrics","connection-section","studio-section","results-section","activity-section","access-section","audit-section","security-section"];
-function showPage(target){pageElements.forEach(id=>{const el=$(id);if(el)el.classList.toggle("page-hidden",!(pageTargets[target]||[]).includes(id));});const wrapper=document.querySelector(".two-col");if(wrapper)wrapper.classList.toggle("page-hidden",!["access-section","audit-section"].includes(target));const titles={"overview":["Intelligence, on demand.","Workspace overview and recent query performance."],"studio-section":["AI Query Studio","Ask business questions in plain language and inspect generated SQL."],"results-section":["Query Results","Review returned records, execution output and exportable data."],"activity-section":["Agent Activity","Inspect query execution outcomes and recent activity."],"access-section":["Access & Audit","Manage roles, permissions and access visibility."],"audit-section":["Audit Trail","Review administrator audit records and query outcomes."],"security-section":["Security & Governance","Monitor security signals and server-enforced data protections."]};const [title,desc]=titles[target]||titles.overview;let head=$("active-page-heading");if(!head){head=document.createElement("div");head.id="active-page-heading";head.className="page-title";$("overview").after(head);}head.innerHTML="<h1></h1><p></p>";head.querySelector("h1").textContent=title;head.querySelector("p").textContent=desc;head.classList.toggle("page-hidden",target==="overview");window.scrollTo({top:0,behavior:"smooth"});}
+function showPage(target){
+  const visibleIds=pageTargets[target]||pageTargets.overview;
+  const wrapper=document.querySelector(".two-col");
+  if(wrapper)wrapper.classList.toggle("page-hidden",!["access-section","audit-section"].includes(target));
+  pageElements.forEach(id=>{
+    const el=$(id);if(!el)return;
+    const visible=visibleIds.includes(id);
+    el.classList.toggle("page-hidden",!visible);
+    if(visible){el.classList.remove("page-enter");void el.offsetWidth;el.classList.add("page-enter");}
+  });
+  const titles={"overview":["Intelligence, on demand.","Workspace overview and recent query performance."],"studio-section":["AI Query Studio","Ask business questions in plain language and inspect generated SQL."],"results-section":["Query Results","Review returned records, execution output and exportable data."],"activity-section":["Agent Activity","Inspect query execution outcomes and recent activity."],"access-section":["Access Controls","Review authentication, role assignment and query protections."],"audit-section":["Audit Trail","Review administrator audit records and query outcomes."],"security-section":["Security & Governance","Monitor security signals and server-enforced data protections."]};
+  const [title,desc]=titles[target]||titles.overview;
+  let head=$("active-page-heading");
+  if(!head){head=document.createElement("div");head.id="active-page-heading";head.className="page-title";$("overview").after(head);}
+  head.innerHTML="<h1></h1><p></p>";head.querySelector("h1").textContent=title;head.querySelector("p").textContent=desc;
+  head.classList.toggle("page-hidden",target==="overview");
+  if(target!=="overview"){head.classList.remove("page-enter");void head.offsetWidth;head.classList.add("page-enter");}
+  window.scrollTo({top:0,behavior:"smooth"});
+}
 document.querySelectorAll(".nav-item").forEach(button=>button.addEventListener("click",()=>{document.querySelectorAll(".nav-item").forEach(b=>b.classList.remove("active"));button.classList.add("active");showPage(button.dataset.target);}));
 showPage("overview");
 $("clear-activity").addEventListener("click",()=>{activity.length=0;renderActivity();});
