@@ -1,4 +1,4 @@
-
+﻿
 import os
 import re
 import sqlite3
@@ -8,11 +8,11 @@ from pathlib import Path
 
 from groq import Groq
 from dotenv import load_dotenv
-from rag.retriever import get_relevant_schema
+from app.rag.retriever import get_relevant_schema
 
 from app.app.governance import enforce_row_limit, MAX_ROWS
 from app.app.security import open_readonly_connection
-from app.semantic_layer import build_semantic_context
+from app.app.semantic_layer import build_semantic_context
 
 
 # ---------------------------------------------------------
@@ -579,3 +579,5 @@ if __name__ == "__main__":
             default=str,
         )
     )
+
+

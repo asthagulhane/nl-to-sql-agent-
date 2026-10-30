@@ -1,4 +1,5 @@
-﻿"""
+﻿
+"""
 Semantic business layer for QueryMind.
 """
 
@@ -6,34 +7,41 @@ from typing import Dict, List
 
 
 BUSINESS_DEFINITIONS: Dict[str, Dict[str, str]] = {
-    
     "engineering employee": {
-        "description": "An employee who belongs to the Engineering department.",
+        "description": (
+            "An employee who belongs to the Engineering department."
+        ),
         "sql_rule": "employees.department = 'Engineering'",
     },
     "high salary employee": {
-        "description": "An employee whose salary is greater than 100000.",
+        "description": (
+            "An employee whose salary is greater than 100000."
+        ),
         "sql_rule": "employees.salary > 100000",
     },
 }
 
 
 def get_matching_definitions(question: str) -> List[Dict[str, str]]:
+    """Return approved business definitions matching the question."""
     normalized_question = question.lower()
-    matches = []
+    matches: List[Dict[str, str]] = []
 
     for term, definition in BUSINESS_DEFINITIONS.items():
         if term.lower() in normalized_question:
-            matches.append({
-                "term": term,
-                "description": definition["description"],
-                "sql_rule": definition["sql_rule"],
-            })
+            matches.append(
+                {
+                    "term": term,
+                    "description": definition["description"],
+                    "sql_rule": definition["sql_rule"],
+                }
+            )
 
     return matches
 
 
 def build_semantic_context(question: str) -> str:
+    """Build approved business context for SQL generation."""
     matches = get_matching_definitions(question)
 
     if not matches:
@@ -52,10 +60,12 @@ def build_semantic_context(question: str) -> str:
             f"  Required SQL rule: {definition['sql_rule']}"
         )
 
-    lines.extend([
-        "",
-        "Use these approved definitions when generating SQL.",
-        "Do not replace them with your own interpretation.",
-    ])
+    lines.extend(
+        [
+            "",
+            "Use these approved definitions when generating SQL.",
+            "Do not replace them with your own interpretation.",
+        ]
+    )
 
     return "\n".join(lines)

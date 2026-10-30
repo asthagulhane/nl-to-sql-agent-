@@ -52,7 +52,11 @@ def test_client_cannot_escalate_role_with_request_json(monkeypatch):
         }
 
     monkeypatch.setattr(main, "generate_and_run", fake_generate_and_run)
-    monkeypatch.setattr(main, "log_audit_entry", lambda **kwargs: None)
+    monkeypatch.setattr(
+        main,
+        "log_audit_entry",
+        lambda **kwargs: None,
+    )
 
     client = TestClient(main.app)
     response = client.post(
