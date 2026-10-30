@@ -349,7 +349,7 @@ def execute_query(
         conn.set_progress_handler(progress_handler, 1000)
 
         cursor = conn.cursor()
-        bounded_sql = enforce_row_limit(sql, max_rows=MAX_ROWS)
+        bounded_sql = enforce_row_limit(sql, max_rows=MAX_ROWS + 1)
         cursor.execute(bounded_sql)
 
         if cursor.description is None:
