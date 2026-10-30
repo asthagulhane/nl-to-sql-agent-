@@ -349,7 +349,8 @@ def execute_query(
         conn.set_progress_handler(progress_handler, 1000)
 
         cursor = conn.cursor()
-        cursor.execute(sql)
+        bounded_sql = enforce_row_limit(sql, max_rows=MAX_ROWS)
+        cursor.execute(bounded_sql)
 
         if cursor.description is None:
             return {
@@ -512,8 +513,6 @@ def generate_and_run(
                 "error_type": "query_not_allowed",
                 "attempts": attempts,
             }
-
-        sql = enforce_row_limit(sql, max_rows=MAX_ROWS)
 
         result = execute_query(sql, role=role)
 
