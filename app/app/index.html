@@ -1,6 +1,4 @@
-﻿<!DOCTYPE html>
-<html lang="en">
-<head>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -29,28 +27,38 @@ button,input,textarea{font:inherit}button{cursor:pointer}.layout{display:grid;gr
 
 .page-hidden{display:none!important}.page-enter{animation:pageReveal .48s cubic-bezier(.2,.75,.25,1) both;transform-origin:top center}@keyframes pageReveal{from{opacity:0;transform:translateY(18px);clip-path:inset(0 0 88% 0)}to{opacity:1;transform:translateY(0);clip-path:inset(0 0 0 0)}}@media(prefers-reduced-motion:reduce){.page-enter{animation:none}}.page-title{margin-bottom:18px}.page-title h1{font-size:clamp(26px,3vw,36px);margin:0}.page-title p{color:var(--muted);font-size:12px;margin:6px 0 0}.nav-item.active{background:linear-gradient(90deg,#174b79,#192b57);border-color:#3476bd;box-shadow:inset 2px 0 #42d9ed}.nav-icon{color:#83c9ff}.metric-icon{color:#72c8ff;border-color:#3476bd35;background:#3476bd16}.primary{background:linear-gradient(110deg,#2563eb,#5b55e7);color:white}.connection-panel{border-color:#244c80}
 
-/* QueryMind animated accent cycle: teal → blue → violet → rose */
-:root{--cycle-teal:#45e6c4;--cycle-blue:#55b8ff;--cycle-violet:#a78bfa;--cycle-rose:#f18acb}
-@keyframes qmHueCycle{
-  0%,100%{--cycle-current:var(--cycle-teal);--cycle-glow:rgba(69,230,196,.16)}
-  33%{--cycle-current:var(--cycle-blue);--cycle-glow:rgba(85,184,255,.18)}
-  66%{--cycle-current:var(--cycle-violet);--cycle-glow:rgba(167,139,250,.18)}
-  85%{--cycle-current:var(--cycle-rose);--cycle-glow:rgba(241,138,203,.16)}
-}
-:root{animation:qmHueCycle 18s ease-in-out infinite}
-body{background:radial-gradient(ellipse at 72% -8%,#25466b 0,transparent 42%),radial-gradient(ellipse at 0 48%,#16464a 0,transparent 34%),#0b1220}
-.sidebar{background:rgba(10,18,31,.9)}
-.card{background:linear-gradient(145deg,rgba(27,42,64,.96),rgba(15,25,42,.96));border-color:color-mix(in srgb,var(--cycle-current) 25%,#35445d)}
-.brand-icon{background:linear-gradient(135deg,var(--cycle-current),#8cbcff);box-shadow:0 0 30px var(--cycle-glow)}
-.nav-item.active{border-color:color-mix(in srgb,var(--cycle-current) 50%,transparent);box-shadow:inset 3px 0 var(--cycle-current),0 0 22px var(--cycle-glow);background:linear-gradient(90deg,var(--cycle-glow),rgba(167,139,250,.06))}
-.nav-icon,.eyebrow,.spark,.metric-icon{color:var(--cycle-current)}
-.metric-icon,.spark{border-color:color-mix(in srgb,var(--cycle-current) 34%,transparent);background:var(--cycle-glow)}
-.primary{background:linear-gradient(110deg,var(--cycle-current),#7baaff);color:#071321;box-shadow:0 7px 24px var(--cycle-glow)}
+/* QueryMind: cinematic aurora glass */
+:root{--cycle-teal:#83cfc0;--cycle-blue:#8fa9d9;--cycle-violet:#b6a0d0;--cycle-rose:#d99ab5;--cycle-current:var(--cycle-teal);--cycle-glow:rgba(131,207,192,.13);--bg:#10131d;--panel:rgba(28,31,47,.72);--panel2:rgba(34,35,52,.78);--line:rgba(201,185,218,.16);--muted:#aaa5b8;--text:#f2edf6;--teal:#83cfc0;--purple:#b6a0d0;--blue:#8fa9d9}
+@keyframes qmHueCycle{0%,100%{--cycle-current:var(--cycle-teal);--cycle-glow:rgba(131,207,192,.13)}25%{--cycle-current:var(--cycle-blue);--cycle-glow:rgba(143,169,217,.14)}50%{--cycle-current:var(--cycle-violet);--cycle-glow:rgba(182,160,208,.15)}75%{--cycle-current:var(--cycle-rose);--cycle-glow:rgba(217,154,181,.14)}}
+@keyframes qmAuroraDrift{0%{transform:translate3d(-4%,0,0) rotate(-5deg) scale(1)}50%{transform:translate3d(4%,2%,0) rotate(4deg) scale(1.08)}100%{transform:translate3d(-4%,0,0) rotate(-5deg) scale(1)}}
+@keyframes qmAmbientShimmer{0%,100%{opacity:.35}50%{opacity:.65}}
+:root{animation:qmHueCycle 5.5s ease-in-out infinite}
+body{position:relative;isolation:isolate;overflow-x:hidden;background:radial-gradient(ellipse at 72% 0%,rgba(105,81,119,.25),transparent 43%),radial-gradient(ellipse at 5% 60%,rgba(67,117,113,.16),transparent 38%),linear-gradient(135deg,#10131d 0%,#171827 48%,#111923 100%)}
+body:before{content:"";position:fixed;inset:-18%;z-index:-1;pointer-events:none;background:radial-gradient(ellipse at 18% 28%,rgba(125,185,174,.19),transparent 25%),radial-gradient(ellipse at 72% 22%,rgba(166,132,181,.2),transparent 28%),radial-gradient(ellipse at 82% 78%,rgba(205,143,164,.15),transparent 26%),radial-gradient(ellipse at 35% 82%,rgba(126,150,194,.13),transparent 30%);filter:blur(52px);animation:qmAuroraDrift 16s ease-in-out infinite alternate}
+body:after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.32;background:linear-gradient(115deg,transparent 18%,rgba(255,255,255,.035) 35%,transparent 48%,rgba(211,177,211,.035) 68%,transparent 82%);background-size:220% 100%;animation:qmAmbientShimmer 7s ease-in-out infinite}
+.sidebar{background:rgba(17,19,31,.72);backdrop-filter:blur(28px) saturate(135%);border-right:1px solid rgba(206,184,215,.18);box-shadow:12px 0 45px rgba(4,6,14,.16)}
+.card,.status,.connection-metric{background:linear-gradient(145deg,rgba(43,43,61,.72),rgba(23,27,42,.68));border-color:rgba(203,184,218,.18);backdrop-filter:blur(22px) saturate(125%);box-shadow:0 18px 50px rgba(3,5,12,.22),inset 0 1px rgba(255,255,255,.045)}
+.card:after{background:linear-gradient(90deg,transparent,rgba(222,194,220,.32),transparent)}
+.brand-icon{color:#171523;background:linear-gradient(135deg,#91d6c8,#bba5d5 58%,#e0adbd);box-shadow:0 0 28px var(--cycle-glow)}
+.nav-item{color:#c1bdce;transition:background .35s,border-color .35s,color .35s,transform .35s,box-shadow .35s}
+.nav-item:hover{transform:translateX(3px);background:rgba(255,255,255,.055)}
+.nav-item.active{color:#fff;border-color:color-mix(in srgb,var(--cycle-current) 42%,transparent);box-shadow:inset 3px 0 var(--cycle-current),0 8px 26px var(--cycle-glow);background:linear-gradient(100deg,var(--cycle-glow),rgba(182,160,208,.07))}
+.nav-icon{width:32px;height:32px;flex:0 0 32px;display:grid;place-items:center;border:1px solid color-mix(in srgb,var(--cycle-current) 27%,transparent);border-radius:11px;color:var(--cycle-current);background:linear-gradient(145deg,rgba(255,255,255,.09),rgba(255,255,255,.025));box-shadow:0 5px 18px var(--cycle-glow),inset 0 1px rgba(255,255,255,.08)}
+.nav-icon svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 0 5px var(--cycle-glow))}
+.eyebrow,.spark,.metric-icon{color:var(--cycle-current)}
+.spark,.metric-icon{border-color:color-mix(in srgb,var(--cycle-current) 32%,transparent);background:linear-gradient(145deg,var(--cycle-glow),rgba(182,160,208,.07))}
+.primary{color:#1c1a25;background:linear-gradient(110deg,var(--cycle-current),#c7b2d5);box-shadow:0 8px 24px var(--cycle-glow)}
+input,textarea{background:rgba(12,15,25,.58);border-color:rgba(196,180,211,.2)}
 input:focus,textarea:focus{border-color:var(--cycle-current);box-shadow:0 0 0 3px var(--cycle-glow)}
+.example,.tag,.secondary,.pill{background:rgba(255,255,255,.045);border-color:rgba(196,180,211,.17)}
 .example:hover,.secondary:hover{border-color:var(--cycle-current)}
-.connection-panel{border-color:color-mix(in srgb,var(--cycle-current) 38%,#244c80)}
-.status .dot,.pill .dot{background:var(--cycle-current);box-shadow:0 0 12px var(--cycle-glow)}
-@media(prefers-reduced-motion:reduce){:root{animation:none}}
+.sql,.table-wrap{background:rgba(12,15,25,.58)}
+th{background:rgba(43,42,61,.8)}
+tbody tr:hover{background:rgba(255,255,255,.045)}
+.connection-panel{border-color:color-mix(in srgb,var(--cycle-current) 32%,rgba(203,184,218,.18))}
+.status .dot,.pill .dot{background:var(--cycle-current);box-shadow:0 0 13px var(--cycle-glow)}
+.page-enter{animation:pageReveal .62s cubic-bezier(.2,.75,.25,1) both}
+@media(prefers-reduced-motion:reduce){:root,body:before,body:after{animation:none!important}.page-enter{animation:none!important}.nav-item{transition:none}}
 
 </style>
 </head>
@@ -60,14 +68,14 @@ input:focus,textarea:focus{border-color:var(--cycle-current);box-shadow:0 0 0 3p
   <div class="brand"><div class="brand-icon">Q</div><div><strong>QueryMind</strong><small>GOVERNED ANALYTICS</small></div></div>
   <nav aria-label="Main navigation">
     <div class="nav-label">Workspace</div>
-    <button class="nav-item active" data-target="overview"><span class="nav-icon">◈</span><span>Analytics overview</span></button>
-    <button class="nav-item" data-target="studio-section"><span class="nav-icon">✳</span><span>AI query studio</span></button>
-    <button class="nav-item" data-target="results-section"><span class="nav-icon">▤</span><span>Query results</span></button>
-    <button class="nav-item" data-target="activity-section"><span class="nav-icon">⌘</span><span>Agent activity</span></button>
+    <button class="nav-item active" data-target="overview"><span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10.5 12 4l8 6.5V20H4z"/><path d="M9 20v-6h6v6"/></svg></span><span>Analytics overview</span></button>
+    <button class="nav-item" data-target="studio-section"><span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z"/><path d="m19 16 .8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z"/></svg></span><span>AI query studio</span></button>
+    <button class="nav-item" data-target="results-section"><span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></svg></span><span>Query results</span></button>
+    <button class="nav-item" data-target="activity-section"><span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h3l2-7 4 14 3-10 2 3h4"/></svg></span><span>Agent activity</span></button>
     <div class="nav-label" style="margin-top:15px">Governance</div>
-    <button class="nav-item" data-target="access-section"><span class="nav-icon">⬡</span><span>Access controls</span></button>
-    <button class="nav-item" data-target="audit-section"><span class="nav-icon">◷</span><span>Audit trail</span></button>
-    <button class="nav-item" data-target="security-section"><span class="nav-icon">⬡</span><span>Security &amp; Governance</span></button>
+    <button class="nav-item" data-target="access-section"><span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 20 7v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/><path d="m8.5 12 2.2 2.2 4.8-5"/></svg></span><span>Access controls</span></button>
+    <button class="nav-item" data-target="audit-section"><span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2M5 4 3 7"/></svg></span><span>Audit trail</span></button>
+    <button class="nav-item" data-target="security-section"><span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></svg></span><span>Security &amp; Governance</span></button>
   </nav>
   <div class="side-bottom"><div class="status"><div class="status-line"><span class="dot" id="health-dot"></span><strong id="health-label">Checking API</strong></div><p id="health-detail">Connecting to the local QueryMind service…</p></div></div>
 </aside>
