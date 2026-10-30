@@ -76,6 +76,12 @@ def read_root():
     }
 
 
+@app.get("/health")
+def health_check():
+    """Lightweight liveness endpoint for deployments and uptime checks."""
+    return {"status": "healthy", "service": "QueryMind", "version": app.version}
+
+
 @app.get("/ui")
 def serve_frontend():
     if not FRONTEND_PATH.is_file():
@@ -149,11 +155,12 @@ def query(
 ):
     """Authenticate, classify, execute, mask, and audit a query."""
 
-    # 1. Apply rate limiting.
-    enforce_rate_limit(http_request)
-
-    # 2. Derive the role from server-configured API keys.
+    # 1. Authenticate before consuming the query quota. Invalid credentials
+    # cannot exhaust the rate limit reserved for authenticated users.
     role = role_for_api_key(x_api_key)
+
+    # 2. Apply the query rate limit to authenticated requests.
+    enforce_rate_limit(http_request)
 
     question = request.question.strip()
 
