@@ -29,6 +29,11 @@ ENV_PATH = os.path.abspath(
 
 load_dotenv(ENV_PATH)
 
+MODEL_NAME = "openai/gpt-oss-120b"
+DEFAULT_TIMEOUT_SECONDS = 5.0
+LLM_REQUEST_TIMEOUT_SECONDS = 20.0
+MAX_SQL_LENGTH = 20_000
+
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
 if not GROQ_API_KEY:
@@ -52,10 +57,7 @@ def create_groq_client(api_key: str):
 
 client = create_groq_client(GROQ_API_KEY)
 
-MODEL_NAME = "openai/gpt-oss-120b"
-DEFAULT_TIMEOUT_SECONDS = 5.0
-LLM_REQUEST_TIMEOUT_SECONDS = 20.0
-MAX_SQL_LENGTH = 20_000
+
 
 
 # ---------------------------------------------------------
