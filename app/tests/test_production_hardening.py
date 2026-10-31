@@ -50,3 +50,38 @@ def test_invalid_api_key_does_not_consume_authenticated_query_quota(monkeypatch)
 
     assert response.status_code == 401
     assert calls == []
+
+
+def test_request_id_is_unique_and_returned_in_response_header():
+    client = TestClient(main.app)
+
+    first = client.get("/health")
+    second = client.get("/health")
+
+    first_id = first.headers.get("X-Request-ID")
+    second_id = second.headers.get("X-Request-ID")
+
+    assert first.status_code == 200
+    assert first_id
+    assert second_id
+    assert first_id != second_id
+
+
+def test_audit_writer_records_request_id_and_duration(tmp_path, monkeypatch):
+    audit_path = tmp_path / "audit.jsonl"
+    monkeypatch.setattr(governance, "AUDIT_LOG_PATH", str(audit_path))
+
+    governance.log_audit_entry(
+        role="analyst",
+        question="Show monthly revenue",
+        sql="SELECT 1;",
+        row_count=1,
+        success=True,
+        request_id="request-test-123",
+        duration_ms=12.5,
+    )
+
+    event = json.loads(audit_path.read_text(encoding="utf-8").strip())
+
+    assert event["request_id"] == "request-test-123"
+    assert event["duration_ms"] == 12.5
