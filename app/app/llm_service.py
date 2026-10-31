@@ -37,10 +37,24 @@ if not GROQ_API_KEY:
         "Check the project's .env configuration."
     )
 
-client = Groq(api_key=GROQ_API_KEY)
+def create_groq_client(api_key: str):
+    """Create a bounded Groq client with SDK retries disabled.
+
+    QueryMind owns retry decisions so transient model failures do not
+    trigger hidden, potentially long SDK retry sequences.
+    """
+    return Groq(
+        api_key=api_key,
+        timeout=LLM_REQUEST_TIMEOUT_SECONDS,
+        max_retries=0,
+    )
+
+
+client = create_groq_client(GROQ_API_KEY)
 
 MODEL_NAME = "openai/gpt-oss-120b"
 DEFAULT_TIMEOUT_SECONDS = 5.0
+LLM_REQUEST_TIMEOUT_SECONDS = 20.0
 MAX_SQL_LENGTH = 20_000
 
 
