@@ -184,6 +184,33 @@ def validate_sql_candidate(sql: str) -> tuple[bool, str]:
 
 
 # ---------------------------------------------------------
+# AI provider error classification
+# ---------------------------------------------------------
+
+def classify_llm_error(error: Exception) -> tuple[str, str]:
+    """Map provider exceptions to safe, stable API error categories."""
+    error_name = type(error).__name__.lower()
+    status_code = getattr(error, "status_code", None)
+
+    if "timeout" in error_name:
+        return "llm_timeout", "The AI service request timed out. Please try again."
+
+    if status_code == 429 or "ratelimit" in error_name:
+        return "llm_rate_limited", "The AI service is receiving too many requests. Please try again shortly."
+
+    if status_code in (401, 403) or "authentication" in error_name:
+        return "llm_authentication_error", "The AI service credentials or permissions are invalid."
+
+    if "connection" in error_name:
+        return "llm_connection_error", "The AI service could not be reached. Please try again."
+
+    if isinstance(status_code, int) and status_code >= 500:
+        return "llm_provider_error", "The AI service is temporarily unavailable. Please try again later."
+
+    return "llm_generation_error", "SQL generation failed. Please try again later."
+
+
+# ---------------------------------------------------------
 # LLM SQL generation
 # ---------------------------------------------------------
 
@@ -493,12 +520,13 @@ def generate_and_run(
                 error_context=error_context,
                 role=role,
             )
-        except Exception:
+        except Exception as error:
+            error_type, safe_message = classify_llm_error(error)
             return {
                 "final_sql": None,
                 "results": None,
-                "error": "SQL generation failed. Please try again later.",
-                "error_type": "generation_error",
+                "error": safe_message,
+                "error_type": error_type,
                 "attempts": attempts,
             }
 
