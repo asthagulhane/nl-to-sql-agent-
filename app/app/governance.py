@@ -155,6 +155,8 @@ def log_audit_entry(
     row_count: int,
     success: bool,
     error: str = None,
+    request_id: str = None,
+    duration_ms: float = None,
 ):
     """Append one audit event to the JSONL audit log."""
 
@@ -170,6 +172,8 @@ def log_audit_entry(
         "row_count": row_count,
         "success": success,
         "error": error,
+        "request_id": request_id,
+        "duration_ms": duration_ms,
     }
 
     audit_path = os.path.abspath(AUDIT_LOG_PATH)
