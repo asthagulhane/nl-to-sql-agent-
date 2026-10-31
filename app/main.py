@@ -1,6 +1,8 @@
 
 import json
 import os
+import time
+import uuid
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -49,6 +51,16 @@ app = FastAPI(
 )
 
 FRONTEND_PATH = BASE_DIR / "app" / "index.html"
+
+
+@app.middleware("http")
+async def add_request_id(request: Request, call_next):
+    """Attach a unique correlation ID to every HTTP response."""
+    request_id = str(uuid.uuid4())
+    request.state.request_id = request_id
+    response = await call_next(request)
+    response.headers["X-Request-ID"] = request_id
+    return response
 
 
 # ---------------------------------------------------------
@@ -177,6 +189,10 @@ def query(
             detail="Question is too long (maximum 1000 characters).",
         )
 
+    # Track the complete accepted query pipeline, including routing and AI/SQL work.
+    request_started = time.perf_counter()
+    request_id = http_request.state.request_id
+
     # 4. Classify the request before generating SQL.
     classification = classify_request(question)
 
@@ -194,6 +210,8 @@ def query(
             row_count=0,
             success=False,
             error=error_message,
+            request_id=request_id,
+            duration_ms=round((time.perf_counter() - request_started) * 1000, 2),
         )
 
         status_code = 422 if category == "invalid" else 400
@@ -239,6 +257,8 @@ def query(
         row_count=row_count,
         success=success,
         error=result.get("error"),
+        request_id=request_id,
+        duration_ms=round((time.perf_counter() - request_started) * 1000, 2),
     )
 
     return result
